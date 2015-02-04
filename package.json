@@ -2,18 +2,11 @@
   "name": "cf-api-lib",
   "version": "0.0.0",
   "description": "codefresh api library",
-  "author": {
-    "name": "",
-    "email": ""
-  },
-  "repository": "user/repo",
-  "license": "MIT",
   "files": [
     "index.js"
   ],
   "keywords": [
-    "cf-api-lib",
-    ""
+    "cf-api-lib"
   ],
   "dependencies": {
     "request": "^2.53.0"
