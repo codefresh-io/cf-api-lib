@@ -36,8 +36,10 @@ module.exports = function (host, accessToken) {
             });
     };
 
-    self.dropImage = {
-        get: dropImageGet
+    self.machine = {
+        dropImage: {
+            get: dropImageGet
+        }
     };
 };
 

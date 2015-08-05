@@ -35,7 +35,7 @@ describe('Runtime valid http requests', function () {
                     })
                     .reply(200, "response");
 
-                return api.runtime.dropImage.get("1", "1", "true", "true", "imageName")
+                return api.runtime.machine.dropImage.get("1", "1", "true", "true", "imageName")
                     .then(function (res) {
                         expect(res.statusCode).to.equal(200);
                         expect(res.body).to.equal("response");
@@ -63,7 +63,7 @@ describe('Runtime non-valid http requests', function () {
         return Q()
             .then(function () {
 
-                return api.runtime.dropImage.get("1", "1", "true", "true", "imageName")
+                return api.runtime.machine.dropImage.get("1", "1", "true", "true", "imageName")
                     .then(function () {
                         return Q.reject(new CFError(ErrorTypes.Error, "should have failed with a non valid http request"));
                     }, function(err){
