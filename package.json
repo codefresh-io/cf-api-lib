@@ -1,33 +1,70 @@
 {
-  "name": "cf-api-lib",
-  "version": "0.0.0",
-  "description": "codefresh api library",
-  "files": [
-    "index.js"
+  "name": "github",
+  "version": "0.2.4",
+  "description": "NodeJS wrapper for the GitHub API",
+  "author": {
+    "name": "Mike de Boer",
+    "email": "info@mikedeboer.nl"
+  },
+  "contributors": [
+    {
+      "name": "Mike de Boer",
+      "email": "info@mikedeboer.nl"
+    },
+    {
+      "name": "Fabian Jakobs",
+      "email": "fabian@c9.io"
+    }
   ],
-  "keywords": [
-    "cf-api-lib"
-  ],
+  "homepage": "http://github.com/mikedeboer/node-github",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/mikedeboer/node-github.git"
+  },
+  "engine": {
+    "node": ">=0.4.0"
+  },
   "dependencies": {
-    "cf-errors": "0.0.4",
-    "lodash": "^3.10.1",
-    "q": "^1.4.1",
-    "request": "^2.60.0"
+    "mime": "^1.2.11"
   },
   "devDependencies": {
-    "chai": "^3.2.0",
-    "gulp": "^3.9.0",
-    "gulp-clean": "^0.3.1",
-    "gulp-coverage": "^0.3.36",
-    "gulp-env": "^0.2.0",
-    "gulp-git": "^1.2.1",
-    "gulp-ignore": "^1.2.1",
-    "gulp-jshint": "^1.11.0",
-    "gulp-logger": "0.0.2",
-    "gulp-mocha": "^2.1.1",
-    "gulp-run": "^1.6.7",
-    "gulp-util": "^3.0.4",
-    "nock": "^2.9.1",
-    "run-sequence": "^1.1.2"
-  }
+    "oauth": "~0.9.7",
+    "optimist": "~0.6.0",
+    "mocha": "~1.13.0"
+  },
+  "main": ".",
+  "scripts": {
+    "test": "node ./test/all.js"
+  },
+  "licenses": [
+    {
+      "type": "The MIT License",
+      "url": "http://www.opensource.org/licenses/mit-license.php"
+    }
+  ],
+  "gitHead": "29dedb3022649c27ac1dad79326270b6b2a48047",
+  "bugs": {
+    "url": "https://github.com/mikedeboer/node-github/issues"
+  },
+  "_id": "github@0.2.4",
+  "_shasum": "24fa7f0e13fa11b946af91134c51982a91ce538b",
+  "_from": "github@>=0.2.3 <0.3.0",
+  "_npmVersion": "1.4.21",
+  "_npmUser": {
+    "name": "mikedeboer",
+    "email": "info@mikedeboer.nl"
+  },
+  "maintainers": [
+    {
+      "name": "mikedeboer",
+      "email": "info@mikedeboer.nl"
+    }
+  ],
+  "dist": {
+    "shasum": "24fa7f0e13fa11b946af91134c51982a91ce538b",
+    "tarball": "http://registry.npmjs.org/github/-/github-0.2.4.tgz"
+  },
+  "directories": {},
+  "_resolved": "https://registry.npmjs.org/github/-/github-0.2.4.tgz",
+  "readme": "ERROR: No README data found!"
 }
