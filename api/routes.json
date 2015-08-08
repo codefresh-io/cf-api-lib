@@ -21,7 +21,7 @@
                 "required": true,
                 "validation": "",
                 "invalidmsg": "",
-                "description": ""
+                "description": "Mongo ObjectId"
             }
         }
     },
@@ -40,6 +40,125 @@
             "method": "GET",
             "roles": ["Admin"]
         }
-    }
+    },
 
+    "progress": {
+        "get-from-index": {
+            "url": "/progress/:id/:index",
+            "method": "GET",
+            "roles": ["User"],
+            "params": {
+                "index": {
+                    "type": "Number",
+                    "required": false,
+                    "invalidmsg": "",
+                    "description": "index from above it progress logs will be returned"
+                },
+                "$id": null
+            }
+        }
+    },
+
+    "runtime": {
+        "code": {
+            "url": "/runtime/codeit",
+            "method": "POST",
+            "roles": ["User"],
+            "progress": {
+                "section": "progress",
+                "route": "getFromIndex",
+                "allStates": ["success", "error", "terminating", "terminated", "running"],
+                "successStates": ["success"],
+                "failStates": ["error", "terminated"],
+                "finishStates": ["success", "error", "terminated"]
+            },
+            "params": {
+                "repoOwner": {
+                    "type": "String",
+                    "required": true,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "repoName": {
+                    "type": "String",
+                    "required": true,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "repoData": {
+                    "type": "JSON",
+                    "required": true,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "sha": {
+                    "type": "String",
+                    "required": false,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "branch": {
+                    "type": "String",
+                    "required": false,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": ""
+                }
+            }
+        },
+        "launch": {
+            "url": "/runtime/testit",
+            "method": "POST",
+            "roles": ["User"],
+            "progress": {
+                "section": "progress",
+                "route": "getFromIndex",
+                "allStates": ["success", "error", "terminating", "terminated", "running"],
+                "successStates": ["success"],
+                "failStates": ["error", "terminated"],
+                "finishStates": ["success", "error", "terminated"]
+            },
+            "params": {
+                "repoOwner": {
+                    "type": "String",
+                    "required": true,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "repoName": {
+                    "type": "String",
+                    "required": true,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "repoData": {
+                    "type": "JSON",
+                    "required": true,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": "JSON that contains url field with https and ssh"
+                },
+                "sha": {
+                    "type": "String",
+                    "required": false,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "branch": {
+                    "type": "String",
+                    "required": false,
+                    "validation": "",
+                    "invalidmsg": "",
+                    "description": ""
+                }
+            }
+        }
+    }
 }
