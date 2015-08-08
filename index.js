@@ -196,13 +196,11 @@ var Client = module.exports = function(config) {
             this.auth = false;
             return;
         }
-        if (!options.type || "basic|oauth|client|token".indexOf(options.type) === -1)
-            throw new Error("Invalid authentication type, must be 'basic', 'oauth' or 'client'");
-        if (options.type == "basic" && (!options.username || !options.password))
-            throw new Error("Basic authentication requires both a username and password to be set");
-        if (options.type == "oauth") {
-            if (!options.token && !(options.key && options.secret))
-                throw new Error("OAuth2 authentication requires a token or key & secret to be set");
+        if (!options.type || "basic|token".indexOf(options.type) === -1)
+            throw new Error("Invalid authentication type, must be 'basic' or 'token'");
+        if (options.type == "basic" && (!options.username || !options.password)){
+            throw new Error("Basic authentication is not yet implemented");
+            //throw new Error("Basic authentication requires both a username and password to be set");
         }
         if (options.type == "token" && !options.token)
             throw new Error("Token authentication requires a token to be set");
@@ -335,22 +333,13 @@ var Client = module.exports = function(config) {
         if (this.auth) {
             var basic;
             switch (this.auth.type) {
-                case "oauth":
-                    if (this.auth.token) {
-                        path += (path.indexOf("?") === -1 ? "?" : "&") +
-                            "access_token=" + encodeURIComponent(this.auth.token);
-                    } else {
-                        path += (path.indexOf("?") === -1 ? "?" : "&") +
-                            "client_id=" + encodeURIComponent(this.auth.key) +
-                            "&client_secret=" + encodeURIComponent(this.auth.secret);
-                    }
-                    break;
                 case "token":
-                    headers.authorization = "token " + this.auth.token;
+                    headers['x-access-token'] = this.auth.token;
                     break;
                 case "basic":
-                    basic = new Buffer(this.auth.username + ":" + this.auth.password, "ascii").toString("base64");
-                    headers.authorization = "Basic " + basic;
+                    throw new Error("Basic Authentication is not yet implemented");
+                    //basic = new Buffer(this.auth.username + ":" + this.auth.password, "ascii").toString("base64");
+                    //headers.authorization = "Basic " + basic;
                     break;
                 default:
                     break;
