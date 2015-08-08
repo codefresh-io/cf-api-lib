@@ -29,14 +29,16 @@
     "user": {
         "get": {
             "url": "/user",
-            "method": "GET"
+            "method": "GET",
+            "roles": ["User"]
         }
     },
 
     "images": {
         "get-all": {
             "url": "/runtime",
-            "method": "GET"
+            "method": "GET",
+            "roles": ["Admin"]
         }
     }
 
