@@ -1,6 +1,7 @@
 "use strict";
 
-var Assert  = require("assert");
+var chai    = require('chai');
+var expect  = chai.expect;
 var Client  = require("./../index");
 var Q       = require("q");
 
@@ -12,7 +13,8 @@ describe("[<%sectionName%>]", function() {
         client = new Client();
         client.authenticate({
             type: "token",
-            token: token
+            token: token,
+            performValidationsOnClient: false
         });
     });
 

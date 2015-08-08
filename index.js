@@ -1,11 +1,12 @@
 "use strict";
 
-var error = require("./error");
 var fs = require("fs");
 var mime = require("mime");
 var Util = require("./util");
 var Url = require("url");
 var Q = require('q');
+var CFError    = require('cf-errors');
+var ErrorTypes = CFError.errorTypes;
 
 var Client = module.exports = function(config) {
     config = config || {};
@@ -53,8 +54,8 @@ var Client = module.exports = function(config) {
                 if (paramName.charAt(0) === "$") {
                     paramName = paramName.substr(1);
                     if (!defines.params[paramName]) {
-                        throw new error.BadRequest("Invalid variable parameter name substitution; param '" +
-                            paramName + "' not found in defines block", "fatal");
+                        throw new CFError(ErrorTypes.Error, "Invalid variable parameter name substitution; param '" +
+                        paramName + "' not found in defines block");
                     }
                     else {
                         def = paramsStruct[paramName] = defines.params[paramName];
@@ -65,52 +66,54 @@ var Client = module.exports = function(config) {
                     def = paramsStruct[paramName];
 
                 value = trim(msg[paramName]);
-                if (typeof value !== "boolean" && !value) {
-                    // we don't need to validation for undefined parameter values
-                    // that are not required.
-                    if (!def.required || (def["allow-empty"] && value === ""))
-                        continue;
-                    throw new error.BadRequest("Empty value for parameter '" +
-                        paramName + "': " + value);
-                }
-
-                // validate the value and type of parameter:
-                if (def.validation) {
-                    if (!new RegExp(def.validation).test(value)) {
-                        throw new error.BadRequest("Invalid value for parameter '" +
+                if (self.config.performValidationsOnClient){
+                    if (typeof value !== "boolean" && !value) {
+                        // we don't need to validation for undefined parameter values
+                        // that are not required.
+                        if (!def.required || (def["allow-empty"] && value === ""))
+                            continue;
+                        throw new CFError(ErrorTypes.Error, "Empty value for parameter '" +
                             paramName + "': " + value);
                     }
-                }
 
-                if (def.type) {
-                    type = def.type.toLowerCase();
-                    if (type === "number") {
-                        value = parseInt(value, 10);
-                        if (isNaN(value)) {
-                            throw new error.BadRequest("Invalid value for parameter '" +
-                                paramName + "': " + msg[paramName] + " is NaN");
+                    // validate the value and type of parameter:
+                    if (def.validation) {
+                        if (!new RegExp(def.validation).test(value)) {
+                            throw new CFError(ErrorTypes.Error, "Invalid value for parameter '" +
+                                paramName + "': " + value);
                         }
                     }
-                    else if (type === "float") {
-                        value = parseFloat(value);
-                        if (isNaN(value)) {
-                            throw new error.BadRequest("Invalid value for parameter '" +
-                                paramName + "': " + msg[paramName] + " is NaN");
-                        }
-                    }
-                    else if (type === "json") {
-                        if (typeof value === "string") {
-                            try {
-                                value = JSON.parse(value);
-                            }
-                            catch(ex) {
-                                throw new error.BadRequest("JSON parse error of value for parameter '" +
-                                    paramName + "': " + value);
+
+                    if (def.type) {
+                        type = def.type.toLowerCase();
+                        if (type === "number") {
+                            value = parseInt(value, 10);
+                            if (isNaN(value)) {
+                                throw new CFError(ErrorTypes.Error, "Invalid value for parameter '" +
+                                    paramName + "': " + msg[paramName] + " is NaN");
                             }
                         }
-                    }
-                    else if (type === "date") {
-                        value = new Date(value);
+                        else if (type === "float") {
+                            value = parseFloat(value);
+                            if (isNaN(value)) {
+                                throw new CFError(ErrorTypes.Error, "Invalid value for parameter '" +
+                                    paramName + "': " + msg[paramName] + " is NaN");
+                            }
+                        }
+                        else if (type === "json") {
+                            if (typeof value === "string") {
+                                try {
+                                    value = JSON.parse(value);
+                                }
+                                catch(ex) {
+                                    throw new CFError(ErrorTypes.Error, ex, "JSON parse error of value for parameter '" +
+                                        paramName + "': " + value);
+                                }
+                            }
+                        }
+                        else if (type === "date") {
+                            value = new Date(value);
+                        }
                     }
                 }
                 msg[paramName] = value;
@@ -135,7 +138,7 @@ var Client = module.exports = function(config) {
                     var funcName = Util.toCamelCase(parts.join("-"));
 
                     if (!api[section]) {
-                        throw new Error("Unsupported route section, not implemented in version " +
+                        throw new CFError(ErrorTypes.Error, "Unsupported route section, not implemented in version " +
                             self.version + " for route '" + endPoint + "' and block: " +
                             JSON.stringify(block));
                     }
@@ -143,7 +146,7 @@ var Client = module.exports = function(config) {
                     if (!api[section][funcName]) {
                         if (self.debug)
                             Util.log("Tried to call " + funcName);
-                        throw new Error("Unsupported route, not implemented in version " +
+                        throw new CFError(ErrorTypes.Error, "Unsupported route, not implemented in version " +
                             self.version + " for route '" + endPoint + "' and block: " +
                             JSON.stringify(block));
                     }
@@ -167,18 +170,16 @@ var Client = module.exports = function(config) {
                     block.requestHeaders = block.requestHeaders.concat(self.requestHeaders);
 
 
-                    self[section][funcName] = function(msg, callback) {
+                    self[section][funcName] = function(msg) {
                         try {
                             parseParams(msg, block.params);
                         }
                         catch (ex) {
-                            // when the message was sent to the client, we can
-                            // reply with the error directly.
-                            api.sendError(ex, block, msg, callback);
+                            // on error before even sending the request, there's no need to continue.
+                            var error = new CFError(ErrorTypes.Error, ex, "Failed to parse params");
                             if (self.debug)
-                                Util.log(ex.message, "fatal");
-                            // on error, there's no need to continue.
-                            return;
+                                Util.log(error, block, msg.user, "error");
+                            return Q.reject(error);
                         }
 
                         return api[section][funcName].call(api, msg, block);
@@ -200,16 +201,15 @@ var Client = module.exports = function(config) {
             return;
         }
         if (!options.type || "basic|token".indexOf(options.type) === -1)
-            throw new Error("Invalid authentication type, must be 'basic' or 'token'");
+            throw new CFError(ErrorTypes.Error, "Invalid authentication type, must be 'basic' or 'token'");
         if (options.type === "basic"){
-            throw new Error("Basic authentication is not yet implemented");
+            throw new CFError(ErrorTypes.Error, "Basic authentication is not yet implemented");
         }
         if (options.type === "basic" && (!options.username || !options.password)){
-            throw new Error("Basic authentication requires both a username and password to be set");
+            throw new CFError(ErrorTypes.Error, "Basic authentication requires both a username and password to be set");
         }
         if (options.type === "token" && !options.token)
-            throw new Error("Token authentication requires a token to be set");
-
+            throw new CFError(ErrorTypes.Error, "Token authentication requires a token to be set");
         this.auth = options;
     };
 
@@ -411,12 +411,8 @@ var Client = module.exports = function(config) {
                             callCallback(err);
                         });
                         res.on("end", function() {
-                            if (res.statusCode >= 400 && res.statusCode < 600 || res.statusCode < 10) {
-                                callCallback(new error.HttpError(data, res.statusCode));
-                            } else {
-                                res.data = data;
-                                callCallback(null, res);
-                            }
+                            res.data = data;
+                            callCallback(null, res);
                         });
                     });
 
@@ -428,13 +424,13 @@ var Client = module.exports = function(config) {
                     req.on("error", function(e) {
                         if (self.debug)
                             console.log("problem with request: " + e.message);
-                        callCallback(e.message);
+                        callCallback(new CFError(ErrorTypes.Error, e, "Problem with request"));
                     });
 
                     req.on("timeout", function() {
                         if (self.debug)
                             console.log("problem with request: timed out");
-                        callCallback(new error.GatewayTimeout());
+                        callCallback(new CFError(ErrorTypes.Error, "Request timed out"));
                     });
 
                     // write data to request body

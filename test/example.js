@@ -8,7 +8,8 @@ var client = new Client({
 
 client.authenticate({
     type: "token",
-    token: "some_token"
+    token: "some_token",
+    performValidationsOnClient: false
 });
 
 client.user.get({}, function(err, res) {
