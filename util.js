@@ -1,14 +1,3 @@
-/** section: github
- * class Util
- * 
- *  Copyright 2012 Cloud9 IDE, Inc.
- *
- *  This product includes software developed by
- *  Cloud9 IDE, Inc (http://c9.io).
- *
- *  Author: Mike de Boer <mike@c9.io>
- **/
-
 var Util = require("util");
 
 /**
@@ -23,7 +12,7 @@ var Util = require("util");
  **/
 exports.extend = function(dest, src, noOverwrite) {
     for (var prop in src) {
-        if (!noOverwrite || typeof dest[prop] == "undefined")
+        if (!noOverwrite || typeof dest[prop] === "undefined")
             dest[prop] = src[prop];
     }
     return dest;
@@ -74,7 +63,7 @@ exports.toCamelCase = function(str, upper) {
  *  Determines whether a string is true in the html attribute sense.
  **/
 exports.isTrue = function(c){
-    return (c === true || c === "true" || c === "on" || typeof c == "number" && c > 0 || c === "1");
+    return (c === true || c === "true" || c === "on" || typeof c === "number" && c > 0 || c === "1");
 };
 
 /**
@@ -130,7 +119,7 @@ exports.log = function() {
         return;
 
     var msg = args.map(function(arg) {
-        return typeof arg != "string" ? Util.inspect(arg) : arg;
+        return typeof arg !== "string" ? Util.inspect(arg) : arg;
     }).join(" ");
     var pfx = levels[level][0] + "[" + level + "]" + levels[level][1];
 

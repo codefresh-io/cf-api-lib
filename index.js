@@ -17,7 +17,7 @@ var Client = module.exports = function(config) {
 
     var pathPrefix = "";
     // Check if a prefix is passed in the config and strip any leading or trailing slashes from it.
-    if (typeof config.pathPrefix == "string") {
+    if (typeof config.pathPrefix === "string") {
         pathPrefix = "/" + config.pathPrefix.replace(/(^[\/]+|[\/]+$)/g, "");
         this.config.pathPrefix = pathPrefix;
     }
@@ -38,7 +38,7 @@ var Client = module.exports = function(config) {
         delete routes.defines;
 
         function trim(s) {
-            if (typeof s != "string")
+            if (typeof s !== "string")
                 return s;
             return s.replace(/^[\s\t\r\n]+/, "").replace(/[\s\t\r\n]+$/, "");
         }
@@ -48,7 +48,7 @@ var Client = module.exports = function(config) {
             var paramName, def, value, type;
             for (var i = 0, l = params.length; i < l; ++i) {
                 paramName = params[i];
-                if (paramName.charAt(0) == "$") {
+                if (paramName.charAt(0) === "$") {
                     paramName = paramName.substr(1);
                     if (!defines.params[paramName]) {
                         throw new error.BadRequest("Invalid variable parameter name substitution; param '" +
@@ -63,7 +63,7 @@ var Client = module.exports = function(config) {
                     def = paramsStruct[paramName];
 
                 value = trim(msg[paramName]);
-                if (typeof value != "boolean" && !value) {
+                if (typeof value !== "boolean" && !value) {
                     // we don't need to validation for undefined parameter values
                     // that are not required.
                     if (!def.required || (def["allow-empty"] && value === ""))
@@ -82,22 +82,22 @@ var Client = module.exports = function(config) {
 
                 if (def.type) {
                     type = def.type.toLowerCase();
-                    if (type == "number") {
+                    if (type === "number") {
                         value = parseInt(value, 10);
                         if (isNaN(value)) {
                             throw new error.BadRequest("Invalid value for parameter '" +
                                 paramName + "': " + msg[paramName] + " is NaN");
                         }
                     }
-                    else if (type == "float") {
+                    else if (type === "float") {
                         value = parseFloat(value);
                         if (isNaN(value)) {
                             throw new error.BadRequest("Invalid value for parameter '" +
                                 paramName + "': " + msg[paramName] + " is NaN");
                         }
                     }
-                    else if (type == "json") {
-                        if (typeof value == "string") {
+                    else if (type === "json") {
+                        if (typeof value === "string") {
                             try {
                                 value = JSON.parse(value);
                             }
@@ -107,7 +107,7 @@ var Client = module.exports = function(config) {
                             }
                         }
                     }
-                    else if (type == "date") {
+                    else if (type === "date") {
                         value = new Date(value);
                     }
                 }
@@ -198,11 +198,13 @@ var Client = module.exports = function(config) {
         }
         if (!options.type || "basic|token".indexOf(options.type) === -1)
             throw new Error("Invalid authentication type, must be 'basic' or 'token'");
-        if (options.type == "basic" && (!options.username || !options.password)){
+        if (options.type === "basic"){
             throw new Error("Basic authentication is not yet implemented");
-            //throw new Error("Basic authentication requires both a username and password to be set");
         }
-        if (options.type == "token" && !options.token)
+        if (options.type === "basic" && (!options.username || !options.password)){
+            throw new Error("Basic authentication requires both a username and password to be set");
+        }
+        if (options.type === "token" && !options.token)
             throw new Error("Token authentication requires a token to be set");
 
         this.auth = options;
@@ -210,7 +212,7 @@ var Client = module.exports = function(config) {
 
     function getRequestFormat(hasBody, block) {
         if (hasBody)
-            return block.requestFormat || this.constants.requestFormat;
+            return block.requestFormat || this.constants.requestFormat; // jshint ignore:line
 
         return "query";
     }
@@ -221,7 +223,7 @@ var Client = module.exports = function(config) {
             url = config.pathPrefix + def.url;
         }
         var ret = {
-            query: format == "json" ? {} : format == "raw" ? msg.data : []
+            query: format === "json" ? {} : format === "raw" ? msg.data : []
         };
         if (!def || !def.params) {
             ret.url = url;
@@ -234,17 +236,17 @@ var Client = module.exports = function(config) {
                 return;
 
             var isUrlParam = url.indexOf(":" + paramName) !== -1;
-            var valFormat = isUrlParam || format != "json" ? "query" : format;
+            var valFormat = isUrlParam || format !== "json" ? "query" : format;
             var val;
-            if (valFormat != "json") {
-                if (typeof msg[paramName] == "object") {
+            if (valFormat !== "json") {
+                if (typeof msg[paramName] === "object") {
                     try {
                         msg[paramName] = JSON.stringify(msg[paramName]);
                         val = encodeURIComponent(msg[paramName]);
                     }
                     catch (ex) {
-                        return Util.log("httpSend: Error while converting object to JSON: "
-                            + (ex.message || ex), "error");
+                        return Util.log("httpSend: Error while converting object to JSON: " +
+                            (ex.message || ex), "error");
                     }
                 }
                 else if (def.params[paramName] && def.params[paramName].combined) {
@@ -265,9 +267,9 @@ var Client = module.exports = function(config) {
                 url = url.replace(":" + paramName, val);
             }
             else {
-                if (format == "json")
+                if (format === "json")
                     ret.query[paramName] = val;
-                else if (format != "raw")
+                else if (format !== "raw")
                     ret.query.push(paramName + "=" + val);
             }
         });
@@ -288,7 +290,7 @@ var Client = module.exports = function(config) {
         var path = url;
         var protocol = this.config.protocol || this.constants.protocol || "http";
         var host = block.host || this.config.host || this.constants.host;
-        var port = this.config.port || this.constants.port || (protocol == "https" ? 443 : 80);
+        var port = this.config.port || this.constants.port || (protocol === "https" ? 443 : 80);
         var proxyUrl;
         if (this.config.proxy !== undefined) {
             proxyUrl = this.config.proxy;
@@ -309,7 +311,7 @@ var Client = module.exports = function(config) {
             var parsedUrl = Url.parse(proxyUrl);
             protocol = parsedUrl.protocol.replace(":", "");
             host = parsedUrl.hostname;
-            port = parsedUrl.port || (protocol == "https" ? 443 : 80);
+            port = parsedUrl.port || (protocol === "https" ? 443 : 80);
         }
         if (!hasBody && query.length)
             path += "?" + query.join("&");
@@ -319,15 +321,15 @@ var Client = module.exports = function(config) {
             "content-length": "0"
         };
         if (hasBody) {
-            if (format == "json")
+            if (format === "json")
                 query = JSON.stringify(query);
-            else if (format != "raw")
+            else if (format !== "raw")
                 query = query.join("&");
             headers["content-length"] = Buffer.byteLength(query, "utf8");
-            headers["content-type"] = format == "json"
-                ? "application/json; charset=utf-8"
-                : format == "raw"
-                    ? "text/plain; charset=utf-8"
+            headers["content-type"] = format === "json"
+                ? "application/json; charset=utf-8" // jshint ignore:line
+                : format === "raw"
+                    ? "text/plain; charset=utf-8" // jshint ignore:line
                     : "application/x-www-form-urlencoded; charset=utf-8";
         }
         if (this.auth) {
@@ -338,8 +340,8 @@ var Client = module.exports = function(config) {
                     break;
                 case "basic":
                     throw new Error("Basic Authentication is not yet implemented");
-                    //basic = new Buffer(this.auth.username + ":" + this.auth.password, "ascii").toString("base64");
-                    //headers.authorization = "Basic " + basic;
+                    basic = new Buffer(this.auth.username + ":" + this.auth.password, "ascii").toString("base64"); // jshint ignore:line
+                    headers.authorization = "Basic " + basic;
                     break;
                 default:
                     break;
@@ -357,7 +359,7 @@ var Client = module.exports = function(config) {
         function addCustomHeaders(customHeaders) {
             Object.keys(customHeaders).forEach(function(header) {
                 var headerLC = header.toLowerCase();
-                if (block.requestHeaders.indexOf(headerLC) == -1)
+                if (block.requestHeaders.indexOf(headerLC) === -1)
                     return;
                 headers[headerLC] = customHeaders[header];
             });
@@ -438,7 +440,7 @@ var Client = module.exports = function(config) {
             } else {
               req.end();
             }
-        };
+        }
 
         if (hasFileBody) {
             fs.stat(msg.filePath, function(err, stat) {

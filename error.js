@@ -88,9 +88,9 @@ for (var status in statusCodes) {
             exports.HttpError.call(this, msg || status + ": " + defaultMsg, status);
             
             if (status >= 500)
-                Error.captureStackTrace(this, arguments.callee);
+                Error.captureStackTrace(this, arguments.callee); // jshint ignore:line
         };
-    })(defaultMsg, status);
+    })(defaultMsg, status); // jshint ignore:line
     
     Util.inherits(error, exports.HttpError);
     

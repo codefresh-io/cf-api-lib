@@ -13,7 +13,7 @@ var AfterRequestTpl = Fs.readFileSync(__dirname + "/templates/after_request.js.t
 var TestSectionTpl  = Fs.readFileSync(__dirname + "/templates/test_section.js.tpl", "utf8");
 var TestHandlerTpl  = Fs.readFileSync(__dirname + "/templates/test_handler.js.tpl", "utf8");
 
-var main = module.exports = function (routes, tests, restore) {
+var main = module.exports = function (routes, tests) {
     Util.log("Generating files");
 
     var dir = Path.join(__dirname, "api");
@@ -41,15 +41,15 @@ var main = module.exports = function (routes, tests, restore) {
             indent + " *  ##### Params on the `msg` object:",
             indent + " *"
         ];
-        comment.push(indent + " *  - headers (Object): Optional. Key/ value pair "
-            + "of request headers to pass along with the HTTP request. Valid headers are: "
-            + "'" + defines["request-headers"].join("', '") + "'.");
+        comment.push(indent + " *  - headers (Object): Optional. Key/ value pair " +
+            "of request headers to pass along with the HTTP request. Valid headers are: " +
+            "'" + defines["request-headers"].join("', '") + "'.");
         if (!params.length)
             comment.push(indent + " *  No other params, simply pass an empty Object literal `{}`");
         var paramName, def, line;
         for (var i = 0, l = params.length; i < l; ++i) {
             paramName = params[i];
-            if (paramName.charAt(0) == "$") {
+            if (paramName.charAt(0) === "$") {
                 paramName = paramName.substr(1);
                 if (!defines.params[paramName]) {
                     Util.log("Invalid variable parameter name substitution; param '" +
@@ -83,7 +83,7 @@ var main = module.exports = function (routes, tests, restore) {
         var paramName, def;
         for (var i = 0, l = params.length; i < l; ++i) {
             paramName = params[i];
-            if (paramName.charAt(0) == "$") {
+            if (paramName.charAt(0) === "$") {
                 paramName = paramName.substr(1);
                 if (!defines.params[paramName]) {
                     Util.log("Invalid variable parameter name substitution; param '" +
@@ -181,11 +181,11 @@ var main = module.exports = function (routes, tests, restore) {
         if (!tests)
             return;
 
-        def = testSections[section];
+        def      = testSections[section];
         var body = TestSectionTpl
             .replace(/<%sectionName%>/g, section)
             .replace("<%testBody%>", def.join("\n\n"));
-        var path = Path.join(dir, section + "Test.js");
+        var path = Path.join(dir, section + "unit.spec.js");
         Util.log("Writing test file for " + section);
         Fs.writeFileSync(path, body, "utf8");
     });
@@ -194,8 +194,8 @@ var main = module.exports = function (routes, tests, restore) {
 if (!module.parent) {
     var argv = Optimist
         .wrap(80)
-        .usage("Generate the implementation of the codefresh module, including "
-        + "unit-test scaffolds.\nUsage: $0 [-t]")
+        .usage("Generate the implementation of the codefresh module, including " +
+        "unit-test scaffolds.\nUsage: $0 [-t]")
         .alias("t", "tests")
         .describe("t", "Also generate unit test scaffolds")
         .alias("h", "help")
