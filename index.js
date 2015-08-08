@@ -349,6 +349,16 @@ var Client = module.exports = function(config) {
                         };
                     }
 
+
+                    // Support custom headers for specific route
+                    block.requestHeaders = block['request-headers'] || [];
+                    delete block['request-headers'];
+                    block.requestHeaders = block.requestHeaders.map(function(header) {
+                        return header.toLowerCase();
+                    });
+                    block.requestHeaders = block.requestHeaders.concat(self.requestHeaders);
+
+
                     self[section][funcName] = function(msg, callback) {
                         try {
                             parseParams(msg, block.params);
@@ -747,7 +757,7 @@ var Client = module.exports = function(config) {
         function addCustomHeaders(customHeaders) {
             Object.keys(customHeaders).forEach(function(header) {
                 var headerLC = header.toLowerCase();
-                if (self.requestHeaders.indexOf(headerLC) == -1)
+                if (block.requestHeaders.indexOf(headerLC) == -1)
                     return;
                 headers[headerLC] = customHeaders[header];
             });

@@ -3102,8 +3102,8 @@
                     "validation": "",
                     "description": "The integer ID of the last User that you’ve seen." 
                 }
-            }
-            
+            },
+            "request-headers": ["with-emails"]
         },
         
         "get-from": {
