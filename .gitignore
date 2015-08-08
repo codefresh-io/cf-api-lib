@@ -3,3 +3,5 @@
 .c9revisions
 doc/
 node_modules/
+api/**/*.js
+.DS_Store
