@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "description": "NodeJS client for API servers",
   "dependencies": {
-    "mime": "^1.2.11"
+    "mime": "^1.2.11",
+    "q": "^1.4.1"
   },
   "devDependencies": {
     "optimist": "~0.6.0",

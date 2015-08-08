@@ -1,10 +1,11 @@
-    it("should successfully execute <%name%>",  function(next) {
-        client.<%funcName%>(
-            <%params%>,
-            function(err, res) {
-                Assert.equal(err, null);
-                // other assertions go here
-                next();
-            }
-        );
+    it("should successfully execute <%name%>",  function() {
+        return client.<%funcName%>(
+            <%params%>)
+            .then(function(res){
+                // validate result
+            }, function(err){
+                // validate error
+            }, function(prog){
+                // validate progress
+            });
     });

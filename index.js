@@ -5,6 +5,7 @@ var fs = require("fs");
 var mime = require("mime");
 var Util = require("./util");
 var Url = require("url");
+var Q = require('q');
 
 var Client = module.exports = function(config) {
     config = config || {};
@@ -180,7 +181,7 @@ var Client = module.exports = function(config) {
                             return;
                         }
 
-                        api[section][funcName].call(api, msg, block, callback);
+                        return api[section][funcName].call(api, msg, block);
                     };
                 }
                 else {
@@ -279,183 +280,195 @@ var Client = module.exports = function(config) {
         return ret;
     }
 
-    this.httpSend = function(msg, block, callback) {
+    this.httpSend = function(msg, block) {
+
+        var deferred = Q.defer();
+
         var self = this;
-        var method = block.method.toLowerCase();
-        var hasFileBody = block.hasFileBody;
-        var hasBody = !hasFileBody && ("head|get|delete".indexOf(method) === -1);
-        var format = getRequestFormat.call(this, hasBody, block);
-        var obj = getQueryAndUrl(msg, block, format, self.constants);
-        var query = obj.query;
-        var url = this.config.url ? this.config.url + obj.url : obj.url;
 
-        var path = url;
-        var protocol = this.config.protocol || this.constants.protocol || "http";
-        var host = block.host || this.config.host || this.constants.host;
-        var port = this.config.port || this.constants.port || (protocol === "https" ? 443 : 80);
-        var proxyUrl;
-        if (this.config.proxy !== undefined) {
-            proxyUrl = this.config.proxy;
-        } else {
-            proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-        }
-        if (proxyUrl) {
-            path = Url.format({
-                protocol: protocol,
-                hostname: host,
-                port: port,
-                pathname: path
-            });
+        Q()
+            .then(function(){
+                var method = block.method.toLowerCase();
+                var hasFileBody = block.hasFileBody;
+                var hasBody = !hasFileBody && ("head|get|delete".indexOf(method) === -1);
+                var format = getRequestFormat.call(self, hasBody, block);
+                var obj = getQueryAndUrl(msg, block, format, self.constants);
+                var query = obj.query;
+                var url = self.config.url ? self.config.url + obj.url : obj.url;
 
-            if (!/^(http|https):\/\//.test(proxyUrl))
-                proxyUrl = "https://" + proxyUrl;
-
-            var parsedUrl = Url.parse(proxyUrl);
-            protocol = parsedUrl.protocol.replace(":", "");
-            host = parsedUrl.hostname;
-            port = parsedUrl.port || (protocol === "https" ? 443 : 80);
-        }
-        if (!hasBody && query.length)
-            path += "?" + query.join("&");
-
-        var headers = {
-            "host": host,
-            "content-length": "0"
-        };
-        if (hasBody) {
-            if (format === "json")
-                query = JSON.stringify(query);
-            else if (format !== "raw")
-                query = query.join("&");
-            headers["content-length"] = Buffer.byteLength(query, "utf8");
-            headers["content-type"] = format === "json"
-                ? "application/json; charset=utf-8" // jshint ignore:line
-                : format === "raw"
-                    ? "text/plain; charset=utf-8" // jshint ignore:line
-                    : "application/x-www-form-urlencoded; charset=utf-8";
-        }
-        if (this.auth) {
-            var basic;
-            switch (this.auth.type) {
-                case "token":
-                    headers['x-access-token'] = this.auth.token;
-                    break;
-                case "basic":
-                    throw new Error("Basic Authentication is not yet implemented");
-                    basic = new Buffer(this.auth.username + ":" + this.auth.password, "ascii").toString("base64"); // jshint ignore:line
-                    headers.authorization = "Basic " + basic;
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        function callCallback(err, result) {
-            if (callback) {
-                var cb = callback;
-                callback = undefined;
-                cb(err, result);
-            }
-        }
-
-        function addCustomHeaders(customHeaders) {
-            Object.keys(customHeaders).forEach(function(header) {
-                var headerLC = header.toLowerCase();
-                if (block.requestHeaders.indexOf(headerLC) === -1)
-                    return;
-                headers[headerLC] = customHeaders[header];
-            });
-        }
-        addCustomHeaders(Util.extend(msg.headers || {}, this.config.headers));
-
-        if (!headers["user-agent"])
-            headers["user-agent"] = "NodeJS HTTP Client";
-
-        if (!("accept" in headers))
-            headers.accept = this.config.requestMedia || this.constants.requestMedia;
-
-        var options = {
-            host: host,
-            port: port,
-            path: path,
-            method: method,
-            headers: headers
-        };
-
-        if (this.config.rejectUnauthorized !== undefined)
-            options.rejectUnauthorized = this.config.rejectUnauthorized;
-
-        if (this.debug)
-            console.log("REQUEST: ", options);
-
-        function httpSendRequest() {
-            var req = require(protocol).request(options, function(res) {
-                if (self.debug) {
-                    console.log("STATUS: " + res.statusCode);
-                    console.log("HEADERS: " + JSON.stringify(res.headers));
-                }
-                res.setEncoding("utf8");
-                var data = "";
-                res.on("data", function(chunk) {
-                    data += chunk;
-                });
-                res.on("error", function(err) {
-                    callCallback(err);
-                });
-                res.on("end", function() {
-                    if (res.statusCode >= 400 && res.statusCode < 600 || res.statusCode < 10) {
-                        callCallback(new error.HttpError(data, res.statusCode));
-                    } else {
-                        res.data = data;
-                        callCallback(null, res);
-                    }
-                });
-            });
-
-            var timeout = (block.timeout !== undefined) ? block.timeout : self.config.timeout;
-            if (timeout) {
-                req.setTimeout(timeout);
-            }
-
-            req.on("error", function(e) {
-                if (self.debug)
-                    console.log("problem with request: " + e.message);
-                callCallback(e.message);
-            });
-
-            req.on("timeout", function() {
-                if (self.debug)
-                    console.log("problem with request: timed out");
-                callCallback(new error.GatewayTimeout());
-            });
-
-            // write data to request body
-            if (hasBody && query.length) {
-                if (self.debug)
-                    console.log("REQUEST BODY: " + query + "\n");
-                req.write(query + "\n");
-            }
-
-            if (block.hasFileBody) {
-              var stream = fs.createReadStream(msg.filePath);
-              stream.pipe(req);
-            } else {
-              req.end();
-            }
-        }
-
-        if (hasFileBody) {
-            fs.stat(msg.filePath, function(err, stat) {
-                if (err) {
-                    callCallback(err);
+                var path = url;
+                var protocol = self.config.protocol || self.constants.protocol || "http";
+                var host = block.host || self.config.host || self.constants.host;
+                var port = self.config.port || self.constants.port || (protocol === "https" ? 443 : 80);
+                var proxyUrl;
+                if (self.config.proxy !== undefined) {
+                    proxyUrl = self.config.proxy;
                 } else {
-                    headers["content-length"] = stat.size;
-                    headers["content-type"] = mime.lookup(msg.name);
+                    proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+                }
+                if (proxyUrl) {
+                    path = Url.format({
+                        protocol: protocol,
+                        hostname: host,
+                        port: port,
+                        pathname: path
+                    });
+
+                    if (!/^(http|https):\/\//.test(proxyUrl))
+                        proxyUrl = "https://" + proxyUrl;
+
+                    var parsedUrl = Url.parse(proxyUrl);
+                    protocol = parsedUrl.protocol.replace(":", "");
+                    host = parsedUrl.hostname;
+                    port = parsedUrl.port || (protocol === "https" ? 443 : 80);
+                }
+                if (!hasBody && query.length)
+                    path += "?" + query.join("&");
+
+                var headers = {
+                    "host": host,
+                    "content-length": "0"
+                };
+                if (hasBody) {
+                    if (format === "json")
+                        query = JSON.stringify(query);
+                    else if (format !== "raw")
+                        query = query.join("&");
+                    headers["content-length"] = Buffer.byteLength(query, "utf8");
+                    headers["content-type"] = format === "json"
+                        ? "application/json; charset=utf-8" // jshint ignore:line
+                        : format === "raw"
+                        ? "text/plain; charset=utf-8" // jshint ignore:line
+                        : "application/x-www-form-urlencoded; charset=utf-8";
+                }
+                if (self.auth) {
+                    var basic;
+                    switch (self.auth.type) {
+                        case "token":
+                            headers['x-access-token'] = self.auth.token;
+                            break;
+                        case "basic":
+                            throw new Error("Basic Authentication is not yet implemented");
+                            basic = new Buffer(self.auth.username + ":" + self.auth.password, "ascii").toString("base64"); // jshint ignore:line
+                            headers.authorization = "Basic " + basic;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                function callCallback(err, result) {
+                    if (err){
+                        deferred.reject(err);
+                    }
+                    else {
+                        deferred.resolve(result);
+                    }
+                }
+
+                function addCustomHeaders(customHeaders) {
+                    Object.keys(customHeaders).forEach(function(header) {
+                        var headerLC = header.toLowerCase();
+                        if (block.requestHeaders.indexOf(headerLC) === -1)
+                            return;
+                        headers[headerLC] = customHeaders[header];
+                    });
+                }
+                addCustomHeaders(Util.extend(msg.headers || {}, self.config.headers));
+
+                if (!headers["user-agent"])
+                    headers["user-agent"] = "NodeJS HTTP Client";
+
+                if (!("accept" in headers))
+                    headers.accept = self.config.requestMedia || self.constants.requestMedia;
+
+                var options = {
+                    host: host,
+                    port: port,
+                    path: path,
+                    method: method,
+                    headers: headers
+                };
+
+                if (self.config.rejectUnauthorized !== undefined)
+                    options.rejectUnauthorized = self.config.rejectUnauthorized;
+
+                if (self.debug)
+                    console.log("REQUEST: ", options);
+
+                function httpSendRequest() {
+                    var req = require(protocol).request(options, function(res) {
+                        if (self.debug) {
+                            console.log("STATUS: " + res.statusCode);
+                            console.log("HEADERS: " + JSON.stringify(res.headers));
+                        }
+                        res.setEncoding("utf8");
+                        var data = "";
+                        res.on("data", function(chunk) {
+                            data += chunk;
+                        });
+                        res.on("error", function(err) {
+                            callCallback(err);
+                        });
+                        res.on("end", function() {
+                            if (res.statusCode >= 400 && res.statusCode < 600 || res.statusCode < 10) {
+                                callCallback(new error.HttpError(data, res.statusCode));
+                            } else {
+                                res.data = data;
+                                callCallback(null, res);
+                            }
+                        });
+                    });
+
+                    var timeout = (block.timeout !== undefined) ? block.timeout : self.config.timeout;
+                    if (timeout) {
+                        req.setTimeout(timeout);
+                    }
+
+                    req.on("error", function(e) {
+                        if (self.debug)
+                            console.log("problem with request: " + e.message);
+                        callCallback(e.message);
+                    });
+
+                    req.on("timeout", function() {
+                        if (self.debug)
+                            console.log("problem with request: timed out");
+                        callCallback(new error.GatewayTimeout());
+                    });
+
+                    // write data to request body
+                    if (hasBody && query.length) {
+                        if (self.debug)
+                            console.log("REQUEST BODY: " + query + "\n");
+                        req.write(query + "\n");
+                    }
+
+                    if (block.hasFileBody) {
+                        var stream = fs.createReadStream(msg.filePath);
+                        stream.pipe(req);
+                    } else {
+                        req.end();
+                    }
+
+                }
+
+                if (hasFileBody) {
+                    fs.stat(msg.filePath, function(err, stat) {
+                        if (err) {
+                            callCallback(err);
+                        } else {
+                            headers["content-length"] = stat.size;
+                            headers["content-type"] = mime.lookup(msg.name);
+                            httpSendRequest();
+                        }
+                    });
+                } else {
                     httpSendRequest();
                 }
-            });
-        } else {
-            httpSendRequest();
-        }
+            })
+            .done();
+
+        return deferred.promise;
     };
 }).call(Client.prototype);

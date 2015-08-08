@@ -31,6 +31,13 @@
             "url": "/user",
             "method": "GET"
         }
+    },
+
+    "images": {
+        "get-all": {
+            "url": "/runtime",
+            "method": "GET"
+        }
     }
 
 }
