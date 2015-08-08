@@ -1,14 +1,3 @@
-/** section: github
- * class HttpError
- * 
- *  Copyright 2012 Cloud9 IDE, Inc.
- *
- *  This product includes software developed by
- *  Cloud9 IDE, Inc (http://c9.io).
- *
- *  Author: Mike de Boer <mike@c9.io>
- **/
-
 var Util = require("util");
 
 exports.HttpError = function(message, code) {
