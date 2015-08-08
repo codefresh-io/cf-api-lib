@@ -15,7 +15,7 @@ gulp.task('lint', function () {
 gulp.task('unit_pre', function () {
     return gulp.src(['*/**/*.unit.spec.js', '!**/node_modules/**/*.js'], {read: false})
         .pipe(cover.instrument({
-            pattern: ['index.js', '*/**/*.js', '!*/**/*.spec.js', '!**/node_modules/**/*.js', '!debug/**/*.js'],
+            pattern: ['*.js', '*/**/*.js', '!*/**/*.spec.js', '!**/node_modules/**/*.js', '!debug/**/*.js', '!gulpfile.js'],
             debugDirectory: 'debug'
         }))
         .pipe(mocha({reporter: 'spec', timeout: '10000'}))

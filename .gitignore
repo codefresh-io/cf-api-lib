@@ -5,3 +5,8 @@ doc/
 node_modules/
 api/**/*.js
 .DS_Store
+.coverrun
+.coverdata
+debug
+reports
+coverage
