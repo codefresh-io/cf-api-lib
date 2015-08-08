@@ -110,8 +110,9 @@ var main = module.exports = function (routes, tests) {
             if (!block)
                 return;
             var messageType = baseType + "/" + routePart;
-            if (block.url && block.params) {
+            if (block.url) {
                 // we ended up at an API definition part!
+                block.params = block.params || {};
                 var parts    = messageType.split("/");
                 var section  = Util.toCamelCase(parts[1].toLowerCase());
                 if (!block.method) {
@@ -185,7 +186,7 @@ var main = module.exports = function (routes, tests) {
         var body = TestSectionTpl
             .replace(/<%sectionName%>/g, section)
             .replace("<%testBody%>", def.join("\n\n"));
-        var path = Path.join(dir, section + "unit.spec.js");
+        var path = Path.join(dir, section + ".unit.spec.js");
         Util.log("Writing test file for " + section);
         Fs.writeFileSync(path, body, "utf8");
     });

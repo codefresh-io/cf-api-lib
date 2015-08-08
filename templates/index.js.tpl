@@ -13,7 +13,7 @@ var proto = {
     sendError: function(err, block, msg, callback) {
         if (this.client.debug)
             Util.log(err, block, msg.user, "error");
-        if (typeof err == "string")
+        if (typeof err === "string")
             err = new error.InternalServerError(err);
         if (callback)
             callback(err);

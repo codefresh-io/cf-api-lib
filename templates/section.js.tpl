@@ -1,7 +1,7 @@
 "use strict";
 
 var error = require("./../error");
-var Util = require("./../util");
+var Util = require("./../util"); // jshint ignore:line
 
 var <%sectionName%> = module.exports = {
     <%sectionName%>: {}

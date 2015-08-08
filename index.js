@@ -7,20 +7,14 @@ var Util = require("./util");
 var Url = require("url");
 
 var Client = module.exports = function(config) {
+    config = config || {};
     config.headers = config.headers || {};
     this.config = config;
     this.debug = Util.isTrue(config.debug);
 
     this.version = config.version;
-    var cls = require("./api/v" + this.version);
+    var cls = require("./api");
     this[this.version] = new cls(this);
-
-    var pathPrefix = "";
-    // Check if a prefix is passed in the config and strip any leading or trailing slashes from it.
-    if (typeof config.pathPrefix === "string") {
-        pathPrefix = "/" + config.pathPrefix.replace(/(^[\/]+|[\/]+$)/g, "");
-        this.config.pathPrefix = pathPrefix;
-    }
 
     this.setupRoutes();
 };
@@ -36,6 +30,13 @@ var Client = module.exports = function(config) {
             return header.toLowerCase();
         });
         delete routes.defines;
+
+        var pathPrefix = "";
+        // Check if a prefix is passed in the config and strip any leading or trailing slashes from it.
+        if (typeof this.constants.pathPrefix === "string") {
+            pathPrefix = "/" + this.constants.pathPrefix.replace(/(^[\/]+|[\/]+$)/g, "");
+            this.constants.pathPrefix = pathPrefix;
+        }
 
         function trim(s) {
             if (typeof s !== "string")
@@ -123,8 +124,9 @@ var Client = module.exports = function(config) {
                 if (!block)
                     return;
                 var messageType = baseType + "/" + routePart;
-                if (block.url && block.params) {
+                if (block.url) {
                     // we ended up at an API definition part!
+                    block.params = block.params || {};
                     var endPoint = messageType.replace(/^[\/]+/g, "");
                     var parts = messageType.split("/");
                     var section = Util.toCamelCase(parts[1].toLowerCase());
@@ -217,10 +219,10 @@ var Client = module.exports = function(config) {
         return "query";
     }
 
-    function getQueryAndUrl(msg, def, format, config) {
+    function getQueryAndUrl(msg, def, format, constants) {
         var url = def.url;
-        if (config.pathPrefix && url.indexOf(config.pathPrefix) !== 0) {
-            url = config.pathPrefix + def.url;
+        if (constants.pathPrefix && url.indexOf(constants.pathPrefix) !== 0) {
+            url = constants.pathPrefix + def.url;
         }
         var ret = {
             query: format === "json" ? {} : format === "raw" ? msg.data : []
@@ -283,7 +285,7 @@ var Client = module.exports = function(config) {
         var hasFileBody = block.hasFileBody;
         var hasBody = !hasFileBody && ("head|get|delete".indexOf(method) === -1);
         var format = getRequestFormat.call(this, hasBody, block);
-        var obj = getQueryAndUrl(msg, block, format, self.config);
+        var obj = getQueryAndUrl(msg, block, format, self.constants);
         var query = obj.query;
         var url = this.config.url ? this.config.url + obj.url : obj.url;
 
