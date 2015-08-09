@@ -7,26 +7,30 @@ var Url = require("url");
 var Q = require('q');
 var CFError    = require('cf-errors');
 var ErrorTypes = CFError.errorTypes;
+var Fs   = require("fs");
+var Handler = require("./handler.js");
 
 var Client = module.exports = function(config) {
     config = config || {};
     config.headers = config.headers || {};
     this.config = config;
     this.debug = Util.isTrue(config.debug);
-
-    this.version = config.version;
-    var cls = require("./api");
-    this[this.version] = new cls(this);
-
+    this.api = {routes: JSON.parse(Fs.readFileSync(__dirname + "/routes.json", "utf8"))};
     this.setupRoutes();
 };
 
 (function() {
     this.setupRoutes = function() {
         var self = this;
-        var api = this[this.version];
+        var api = this.api;
         var routes = api.routes;
         var defines = routes.defines;
+        var headers = defines["response-headers"];
+        // cast header names to lowercase.
+        if (headers && headers.length)
+            headers = headers.map(function (header) {
+                return header.toLowerCase();
+            });
         this.constants = defines.constants;
         this.requestHeaders = defines["request-headers"].map(function(header) {
             return header.toLowerCase();
@@ -131,35 +135,27 @@ var Client = module.exports = function(config) {
                 if (block.url) {
                     // we ended up at an API definition part!
                     block.params = block.params || {};
-                    var endPoint = messageType.replace(/^[\/]+/g, "");
                     var parts = messageType.split("/");
                     var section = Util.toCamelCase(parts[1].toLowerCase());
+                    if (!block.method) {
+                        throw new CFError(ErrorTypes.Error, "No HTTP method specified for " + messageType + "in section " + section);
+                    }
                     parts.splice(0, 2);
                     var funcName = Util.toCamelCase(parts.join("-"));
 
-                    if (!api[section]) {
-                        throw new CFError(ErrorTypes.Error, "Unsupported route section, not implemented in version " +
-                            self.version + " for route '" + endPoint + "' and block: " +
-                            JSON.stringify(block));
-                    }
-
-                    if (!api[section][funcName]) {
-                        if (self.debug)
-                            Util.log("Tried to call " + funcName);
-                        throw new CFError(ErrorTypes.Error, "Unsupported route, not implemented in version " +
-                            self.version + " for route '" + endPoint + "' and block: " +
-                            JSON.stringify(block));
-                    }
-
-                    if (!self[section]) {
+                    // add the handler to the sections
+                    if (!api[section]){
                         self[section] = {};
-                        // add a utility function 'getFooApi()', which returns the
-                        // section to which functions are attached.
-                        self[Util.toCamelCase("get-" + section + "-api")] = function() {
-                            return self[section];
-                        };
+                        api[section] = {};
                     }
 
+                    api[section][funcName] = new Handler(headers);
+
+                    // add a utility function 'getFooApi()', which returns the
+                    // section to which functions are attached.
+                    self[Util.toCamelCase("get-" + section + "-api")] = function() {
+                        return self[section];
+                    };
 
                     // Support custom headers for specific route
                     block.requestHeaders = block['request-headers'] || [];
@@ -182,7 +178,7 @@ var Client = module.exports = function(config) {
                             return Q.reject(error);
                         }
 
-                        return api[section][funcName].call(api, msg, block);
+                        return api[section][funcName].call(self, msg, block);
                     };
                 }
                 else {
