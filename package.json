@@ -1,29 +1,26 @@
 {
   "name": "cf-api-lib",
   "version": "0.0.0",
-  "description": "codefresh api library",
-  "files": [
-    "index.js"
-  ],
-  "keywords": [
-    "cf-api-lib"
-  ],
+  "description": "NodeJS client for API servers",
   "dependencies": {
-    "request": "^2.53.0"
+    "cf-errors": "0.0.4",
+    "mime": "^1.2.11",
+    "q": "^1.4.1"
   },
   "devDependencies": {
-    "grunt": "^0.4.5",
-    "grunt-cli": "^0.1.13",
-    "grunt-contrib-jshint": "^0.10.0",
-    "grunt-contrib-nodeunit": "^0.4.1",
-    "grunt-contrib-watch": "^0.6.1",
-    "grunt-mocha-cli": "^1.11.0",
-    "jshint-stylish": "^1.0.0",
-    "load-grunt-tasks": "^1.0.0",
-    "should": "^4.6.3",
-    "time-grunt": "^1.0.0"
-  },
-  "scripts": {
-    "test": "grunt"
+    "optimist": "~0.6.0",
+    "chai": "^3.2.0",
+    "gulp": "^3.9.0",
+    "gulp-clean": "^0.3.1",
+    "gulp-coverage": "^0.3.36",
+    "gulp-env": "^0.2.0",
+    "gulp-git": "^1.2.1",
+    "gulp-ignore": "^1.2.1",
+    "gulp-jshint": "^1.11.0",
+    "gulp-logger": "0.0.2",
+    "gulp-mocha": "^2.1.1",
+    "gulp-run": "^1.6.7",
+    "gulp-util": "^3.0.4",
+    "run-sequence": "^1.1.2"
   }
 }
