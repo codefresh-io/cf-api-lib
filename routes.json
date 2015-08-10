@@ -34,6 +34,53 @@
         }
     },
 
+    "repos": {
+        "get-settings": {
+            "url": "/repos/settings/:repoOwner/:repoName",
+            "method": "GET",
+            "roles": ["User"],
+            "params": {
+                "repoOwner": {
+                    "type": "String",
+                    "required": true,
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "repoName": {
+                    "type": "String",
+                    "required": true,
+                    "invalidmsg": "",
+                    "description": ""
+                }
+            }
+        },
+        "set-settings": {
+            "url": "/repos/settings",
+            "method": "POST",
+            "roles": ["User"],
+            "params": {
+                "repoOwner": {
+                    "type": "String",
+                    "required": true,
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "repoName": {
+                    "type": "String",
+                    "required": true,
+                    "invalidmsg": "",
+                    "description": ""
+                },
+                "settings": {
+                    "type": "Json",
+                    "required": true,
+                    "invalidmsg": "",
+                    "description": ""
+                }
+            }
+        }
+    },
+
     "images": {
         "get-all": {
             "url": "/runtime",

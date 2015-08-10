@@ -7,7 +7,7 @@ var Q       = require("q");
 
 describe("[runtime]", function() {
     var client;
-    var token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6Iml0YWktY29kZWZyZXNoIiwicHJvdmlkZXIiOnsibmFtZSI6ImdpdGh1YiJ9LCJpYXQiOjE0MzkwNTQ0OTQsImV4cCI6MTQzOTE0MDg5NH0.CGBoxTipo4YbzAvUdo1bRwIM0mwdWRCOrmUr0f34tgw";
+    var token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6Iml0YWktY29kZWZyZXNoIiwicHJvdmlkZXIiOnsibmFtZSI6ImdpdGh1YiJ9LCJpYXQiOjE0MzkxNTc3NzksImV4cCI6MTQzOTI0NDE3OX0.pzvEVXbW7I-IPaMgrQIyOD-OCk4qB90mPp6aM5gE4zY";
 
     beforeEach(function() {
         client = new Client({
@@ -33,6 +33,24 @@ describe("[runtime]", function() {
                 },
                 sha: "",
                 branch: "master"
+            })
+            .then(function(res){
+                console.log(res);
+            }, function(err){
+                return Q.reject(err);
+            }, function(prog){
+                console.log(prog);
+            });
+    });
+
+    it.only("should successfully execute settings",  function() {
+        this.timeout(5000);
+
+        return client.settings.update(
+            {
+                repoOwner: "itai-codefresh",
+                repoName: "userrecstudy",
+                settings: {}
             })
             .then(function(res){
                 console.log(res);
