@@ -5,6 +5,7 @@ var mime       = require("mime");
 var Util       = require("./util");
 var Q          = require('q');
 var request    = require('request');
+var _          = require('lodash');
 var CFError    = require('cf-errors');
 var ErrorTypes = CFError.errorTypes;
 var Fs         = require("fs");
@@ -48,7 +49,6 @@ var Client = module.exports = function (config) {
         return deferred.promise;
     };
 
-
     this.setupRoutes = function () {
         var self    = this;
         var api     = this.api;
@@ -69,9 +69,20 @@ var Client = module.exports = function (config) {
                     var block = struct[routePart][methodPart];
 
                     block.parameters = block.parameters || [];
-                    block.method     = methodPart;
-                    block.url        = routePart;
-                    var section      = block.tags[0];
+
+
+                    //get global parameters and replace them with the reference
+                    block.parameters.forEach(function (param, index) {
+                        if (param["$ref"]) {
+                            var paramName           = param["$ref"].split('/')[2];
+                            block.parameters[index] = _.cloneDeep(api.parameters[paramName]);
+                        }
+                    });
+
+
+                    block.method = methodPart;
+                    block.url    = routePart;
+                    var section  = block.tags[0];
 
                     // add the handler to the sections
                     if (!api[section]) {
@@ -109,19 +120,29 @@ var Client = module.exports = function (config) {
         this.auth = options;
     };
 
-
     function getQueryAndUrl(msg, def, format, api) {
-        var url = api.basePath + def.url;
-
         var ret = {
-            query: format === "json" ? {} : []
+            payload: format === "json" ? {} : [],
+            url: api.basePath + def.url
         };
+
+        if (!def.parameters){
+            return ret;
+        }
 
         Object.keys(msg).forEach(function (key) {
             var value = msg[key];
-            var valueIn; // 'path' || 'query' || 'body'
-            if (def.parameters[key]) {
-                valueIn = def.parameters[key].in;
+            // TODO handler 'header' case
+            var valueIn; // 'path' || 'query' || 'body' || 'header'
+            var paramDefinition = def.parameters.filter(function(paramDef){
+                if (paramDef.name === key) return true;
+            });
+
+            if(paramDefinition.length){
+                valueIn = paramDefinition[0].in;
+            }
+            else {
+                valueIn = format === "json" ? 'body' : 'query';
             }
 
             var val;
@@ -145,27 +166,22 @@ var Client = module.exports = function (config) {
             }
 
             if (valueIn === 'path') {
-                url = url.replace("{" + key + "}", val);
+                ret.url = ret.url.replace("{" + key + "}", val);
             }
             else if (valueIn === 'query') {
                 if (format === "json")
-                    ret.query[key] = val;
+                    ret.payload[key] = val;
                 else if (format === "query")
-                    ret.query.push(key + "=" + val);
+                    ret.payload.push(key + "=" + val);
+            }
+            else if (valueIn === 'body'){
+                ret.payload[key] = val;
             }
 
         });
 
-        ret.url = url;
         return ret;
     }
-
-    /*
-     if (param["$ref"]){
-     var paramName = param["$ref"].split('/')[2];
-     paramObj = api.parameters[paramName];
-     }
-     */
 
     this.httpSend = function (msg, block) {
 
@@ -183,7 +199,7 @@ var Client = module.exports = function (config) {
                 var hasBody     = !hasFileBody && ("head|get|delete".indexOf(method) === -1);
                 var format      = hasBody ? 'json' : 'query';
                 var obj         = getQueryAndUrl(msg, block, format, self.api);
-                var query       = obj.query;
+                var payload     = obj.payload;
                 var url         = obj.url;
 
                 var path     = url;
@@ -191,8 +207,8 @@ var Client = module.exports = function (config) {
                 var host     = self.api.host;
                 var port     = protocol === "https" ? 443 : 80;
 
-                if (!hasBody && query.length)
-                    path += "?" + query.join("&");
+                if (!hasBody && payload.length)
+                    path += "?" + payload.join("&");
 
                 var headers = {
                     "host": host,
@@ -200,10 +216,10 @@ var Client = module.exports = function (config) {
                 };
                 if (hasBody) {
                     if (format === "json")
-                        query = JSON.stringify(query);
+                        payload = JSON.stringify(payload);
                     else if (format !== "raw")
-                        query = query.join("&");
-                    headers["content-length"] = Buffer.byteLength(query, "utf8");
+                        payload = payload.join("&");
+                    headers["content-length"] = Buffer.byteLength(payload, "utf8");
                     headers["content-type"]   = format === "json"
                         ? "application/json; charset=utf-8" // jshint ignore:line
                         : format === "raw"
@@ -302,10 +318,10 @@ var Client = module.exports = function (config) {
                     });
 
                     // write data to request body
-                    if (hasBody && query.length) {
+                    if (hasBody && payload.length) {
                         if (self.debug)
-                            console.log("REQUEST BODY: " + query + "\n");
-                        req.write(query + "\n");
+                            console.log("REQUEST BODY: " + payload + "\n");
+                        req.write(payload + "\n");
                     }
 
                     if (block.hasFileBody) {

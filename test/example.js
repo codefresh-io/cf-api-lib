@@ -7,7 +7,7 @@ var Q       = require("q");
 
 describe("[runtime]", function() {
     var client;
-    var token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6Iml0YWktY29kZWZyZXNoIiwicHJvdmlkZXIiOnsibmFtZSI6ImdpdGh1YiJ9LCJpYXQiOjE0MzkzODE0NDAsImV4cCI6MTQzOTQ2Nzg0MH0.FkSS4DIvrraY_FSpsH5VFiX-3MGztZV9hYTanAbGQaQ";
+    var token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6Iml0YWktY29kZWZyZXNoIiwicHJvdmlkZXIiOnsibmFtZSI6ImdpdGh1YiJ9LCJpYXQiOjE0Mzk1NzQ3NDIsImV4cCI6MTQzOTY2MTE0Mn0.cQuJMoGcggdL5ltqtmuyVj4K6wz9hnY-suyb4JQXcaQ";
 
     beforeEach(function() {
         client = new Client({
@@ -58,7 +58,7 @@ describe("[runtime]", function() {
             });
     });
 
-    it.only("should successfully execute settings",  function() {
+    it("should successfully execute settings",  function() {
         this.timeout(5000);
 
         return client.repos.setSettings(
@@ -66,6 +66,23 @@ describe("[runtime]", function() {
                 repoOwner: "itai-codefresh",
                 repoName: "userrecstudy",
                 settings: {}
+            })
+            .then(function(res){
+                console.log(res);
+            }, function(err){
+                return Q.reject(err);
+            }, function(prog){
+                console.log(prog);
+            });
+    });
+
+    it.only("should successfully get settings",  function() {
+        this.timeout(5000);
+
+        return client.repos.getSettings(
+            {
+                repoOwner: "itai-codefresh",
+                repoName: "userrecstudy"
             })
             .then(function(res){
                 console.log(res);
