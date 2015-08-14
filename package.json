@@ -5,7 +5,8 @@
   "dependencies": {
     "cf-errors": "0.0.4",
     "mime": "^1.2.11",
-    "q": "^1.4.1"
+    "q": "^1.4.1",
+    "request": "^2.60.0"
   },
   "devDependencies": {
     "optimist": "~0.6.0",

@@ -3,145 +3,75 @@
 var fs = require("fs");
 var mime = require("mime");
 var Util = require("./util");
-var Url = require("url");
 var Q = require('q');
+var request = require('request');
 var CFError    = require('cf-errors');
 var ErrorTypes = CFError.errorTypes;
 var Fs   = require("fs");
 var Handler = require("./handler.js");
 
 var Client = module.exports = function(config) {
+
     config = config || {};
     config.headers = config.headers || {};
     this.config = config;
     this.debug = Util.isTrue(config.debug);
-    this.api = {routes: JSON.parse(Fs.readFileSync(__dirname + "/routes.json", "utf8"))};
-    this.setupRoutes();
 };
 
 (function() {
+
+    this.getApi = function() {
+        var self = this;
+        var deferred = Q.defer();
+
+        if (self.config.url){
+            request(self.config.url, function (error, response, body) {
+                if (!error && response.statusCode === 200) {
+                    self.api = JSON.parse(body);
+                    self.setupRoutes();
+                    deferred.resolve();
+                }
+                else {
+                    deferred.reject(new CFError(ErrorTypes.Error, "failed to retrieve api metadata"));
+                }
+            });
+        }
+        else if (self.config.file){
+            self.api = {routes: JSON.parse(Fs.readFileSync(self.config.file, "utf8"))};
+            self.setupRoutes();
+            deferred.resolve();
+        }
+        else {
+            deferred.reject(new CFError(ErrorTypes.Error, "Missing file or url for retreiving api"));
+        }
+
+        return deferred.promise;
+    };
+
+
     this.setupRoutes = function() {
         var self = this;
         var api = this.api;
-        var routes = api.routes;
-        var defines = routes.defines;
-        var headers = defines["response-headers"];
-        // cast header names to lowercase.
-        if (headers && headers.length)
-            headers = headers.map(function (header) {
-                return header.toLowerCase();
-            });
-        this.constants = defines.constants;
-        this.requestHeaders = defines["request-headers"].map(function(header) {
-            return header.toLowerCase();
-        });
-        delete routes.defines;
+        var routes = api.paths;
+        var headers = [];
 
-        var pathPrefix = "";
-        // Check if a prefix is passed in the config and strip any leading or trailing slashes from it.
-        if (typeof this.constants.pathPrefix === "string") {
-            pathPrefix = "/" + this.constants.pathPrefix.replace(/(^[\/]+|[\/]+$)/g, "");
-            this.constants.pathPrefix = pathPrefix;
+        var basePath = "";
+        // Check if a basePath is passed in the data and strip any leading or trailing slashes from it.
+        if (typeof api.basePath === "string") {
+            basePath = "/" + api.basePath.replace(/(^[\/]+|[\/]+$)/g, "");
+            api.basePath = basePath;
         }
 
-        function trim(s) {
-            if (typeof s !== "string")
-                return s;
-            return s.replace(/^[\s\t\r\n]+/, "").replace(/[\s\t\r\n]+$/, "");
-        }
 
-        function parseParams(msg, paramsStruct) {
-            var params = Object.keys(paramsStruct);
-            var paramName, def, value, type;
-            for (var i = 0, l = params.length; i < l; ++i) {
-                paramName = params[i];
-                if (paramName.charAt(0) === "$") {
-                    paramName = paramName.substr(1);
-                    if (!defines.params[paramName]) {
-                        throw new CFError(ErrorTypes.Error, "Invalid variable parameter name substitution; param '" +
-                        paramName + "' not found in defines block");
-                    }
-                    else {
-                        def = paramsStruct[paramName] = defines.params[paramName];
-                        delete paramsStruct["$" + paramName];
-                    }
-                }
-                else
-                    def = paramsStruct[paramName];
-
-                value = trim(msg[paramName]);
-                if (self.config.performValidationsOnClient){
-                    if (typeof value !== "boolean" && !value) {
-                        // we don't need to validation for undefined parameter values
-                        // that are not required.
-                        if (!def.required || (def["allow-empty"] && value === ""))
-                            continue;
-                        throw new CFError(ErrorTypes.Error, "Empty value for parameter '" +
-                            paramName + "': " + value);
-                    }
-
-                    // validate the value and type of parameter:
-                    if (def.validation) {
-                        if (!new RegExp(def.validation).test(value)) {
-                            throw new CFError(ErrorTypes.Error, "Invalid value for parameter '" +
-                                paramName + "': " + value);
-                        }
-                    }
-
-                    if (def.type) {
-                        type = def.type.toLowerCase();
-                        if (type === "number") {
-                            value = parseInt(value, 10);
-                            if (isNaN(value)) {
-                                throw new CFError(ErrorTypes.Error, "Invalid value for parameter '" +
-                                    paramName + "': " + msg[paramName] + " is NaN");
-                            }
-                        }
-                        else if (type === "float") {
-                            value = parseFloat(value);
-                            if (isNaN(value)) {
-                                throw new CFError(ErrorTypes.Error, "Invalid value for parameter '" +
-                                    paramName + "': " + msg[paramName] + " is NaN");
-                            }
-                        }
-                        else if (type === "json") {
-                            if (typeof value === "string") {
-                                try {
-                                    value = JSON.parse(value);
-                                }
-                                catch(ex) {
-                                    throw new CFError(ErrorTypes.Error, ex, "JSON parse error of value for parameter '" +
-                                        paramName + "': " + value);
-                                }
-                            }
-                        }
-                        else if (type === "date") {
-                            value = new Date(value);
-                        }
-                    }
-                }
-                msg[paramName] = value;
-            }
-        }
-
-        function prepareApi(struct, baseType) {
-            if (!baseType)
-                baseType = "";
+        function prepareApi(struct) {
             Object.keys(struct).forEach(function(routePart) {
-                var block = struct[routePart];
-                if (!block)
-                    return;
-                var messageType = baseType + "/" + routePart;
-                if (block.url) {
-                    // we ended up at an API definition part!
-                    block.params = block.params || {};
-                    var parts = messageType.split("/");
-                    var section = Util.toCamelCase(parts[1].toLowerCase());
-                    if (!block.method) {
-                        throw new CFError(ErrorTypes.Error, "No HTTP method specified for " + messageType + "in section " + section);
-                    }
-                    parts.splice(0, 2);
-                    var funcName = Util.toCamelCase(parts.join("-"));
+                Object.keys(struct[routePart]).forEach(function(methodPart){
+                    var block = struct[routePart][methodPart];
+
+                    block.parameters = block.parameters || [];
+                    block.method = methodPart;
+                    block.url = routePart;
+                    var section = block.tags[0];
 
                     // add the handler to the sections
                     if (!api[section]){
@@ -149,42 +79,12 @@ var Client = module.exports = function(config) {
                         api[section] = {};
                     }
 
-                    api[section][funcName] = new Handler(headers);
+                    api[section][block.operationId] = new Handler(headers);
 
-                    // add a utility function 'getFooApi()', which returns the
-                    // section to which functions are attached.
-                    self[Util.toCamelCase("get-" + section + "-api")] = function() {
-                        return self[section];
+                    self[section][block.operationId] = function(msg) {
+                        return api[section][block.operationId].call(self, msg, block);
                     };
-
-                    // Support custom headers for specific route
-                    block.requestHeaders = block['request-headers'] || [];
-                    delete block['request-headers'];
-                    block.requestHeaders = block.requestHeaders.map(function(header) {
-                        return header.toLowerCase();
-                    });
-                    block.requestHeaders = block.requestHeaders.concat(self.requestHeaders);
-
-
-                    self[section][funcName] = function(msg) {
-                        try {
-                            parseParams(msg, block.params);
-                        }
-                        catch (ex) {
-                            // on error before even sending the request, there's no need to continue.
-                            var error = new CFError(ErrorTypes.Error, ex, "Failed to parse params");
-                            if (self.debug)
-                                Util.log(error, block, msg.user, "error");
-                            return Q.reject(error);
-                        }
-
-                        return api[section][funcName].call(self, msg, block);
-                    };
-                }
-                else {
-                    // recurse into this block next:
-                    prepareApi(block, messageType);
-                }
+                });
             });
         }
 
@@ -209,74 +109,68 @@ var Client = module.exports = function(config) {
         this.auth = options;
     };
 
-    function getRequestFormat(hasBody, block) {
-        if (hasBody)
-            return block.requestFormat || this.constants.requestFormat; // jshint ignore:line
 
-        return "query";
-    }
+    function getQueryAndUrl(msg, def, format, api) {
+        var url = api.basePath + def.url;
 
-    function getQueryAndUrl(msg, def, format, constants) {
-        var url = def.url;
-        if (constants.pathPrefix && url.indexOf(constants.pathPrefix) !== 0) {
-            url = constants.pathPrefix + def.url;
-        }
         var ret = {
-            query: format === "json" ? {} : format === "raw" ? msg.data : []
+            query: format === "json" ? {} : []
         };
-        if (!def || !def.params) {
-            ret.url = url;
-            return ret;
-        }
 
-        Object.keys(def.params).forEach(function(paramName) {
-            paramName = paramName.replace(/^[$]+/, "");
-            if (!(paramName in msg))
-                return;
+        Object.keys(msg).forEach(function (key) {
+            var value = msg[key];
+            var valueIn; // 'path' || 'query' || 'body'
+            if (def.parameters[key]){
+                valueIn = def.parameters[key].in;
+            }
 
-            var isUrlParam = url.indexOf(":" + paramName) !== -1;
-            var valFormat = isUrlParam || format !== "json" ? "query" : format;
             var val;
-            if (valFormat !== "json") {
-                if (typeof msg[paramName] === "object") {
+            if (valueIn === 'path' || format === 'query'){
+                if (typeof value === "object"){
                     try {
-                        msg[paramName] = JSON.stringify(msg[paramName]);
-                        val = encodeURIComponent(msg[paramName]);
+                        value = JSON.stringify(value);
+                        val = encodeURIComponent(value);
                     }
                     catch (ex) {
                         return Util.log("httpSend: Error while converting object to JSON: " +
                             (ex.message || ex), "error");
                     }
                 }
-                else if (def.params[paramName] && def.params[paramName].combined) {
-                    // Check if this is a combined (search) string.
-                    val = msg[paramName].split(/[\s\t\r\n]*\+[\s\t\r\n]*/)
-                                        .map(function(part) {
-                                            return encodeURIComponent(part);
-                                        })
-                                        .join("+");
+                else {
+                    val = encodeURIComponent(value);
                 }
-                else
-                    val = encodeURIComponent(msg[paramName]);
-            }
-            else
-                val = msg[paramName];
-
-            if (isUrlParam) {
-                url = url.replace(":" + paramName, val);
             }
             else {
-                if (format === "json")
-                    ret.query[paramName] = val;
-                else if (format !== "raw")
-                    ret.query.push(paramName + "=" + val);
+                val = value;
             }
+
+            if (valueIn === 'path') {
+                url = url.replace("{" + key + "}", val);
+            }
+            else if (valueIn === 'query'){
+                if (format === "json")
+                    ret.query[key] = val;
+                else if (format === "query")
+                    ret.query.push(key + "=" + val);
+            }
+
         });
+
         ret.url = url;
         return ret;
     }
 
+/*
+    if (param["$ref"]){
+        var paramName = param["$ref"].split('/')[2];
+        paramObj = api.parameters[paramName];
+    }
+*/
+
     this.httpSend = function(msg, block) {
+
+        if (!msg)
+            msg = {};
 
         var deferred = Q.defer();
 
@@ -287,37 +181,16 @@ var Client = module.exports = function(config) {
                 var method = block.method.toLowerCase();
                 var hasFileBody = block.hasFileBody;
                 var hasBody = !hasFileBody && ("head|get|delete".indexOf(method) === -1);
-                var format = getRequestFormat.call(self, hasBody, block);
-                var obj = getQueryAndUrl(msg, block, format, self.constants);
+                var format = hasBody ? 'json' : 'query';
+                var obj = getQueryAndUrl(msg, block, format, self.api);
                 var query = obj.query;
-                var url = self.config.url ? self.config.url + obj.url : obj.url;
+                var url = obj.url;
 
                 var path = url;
-                var protocol = self.config.protocol || self.constants.protocol || "http";
-                var host = block.host || self.config.host || self.constants.host;
-                var port = self.config.port || self.constants.port || (protocol === "https" ? 443 : 80);
-                var proxyUrl;
-                if (self.config.proxy !== undefined) {
-                    proxyUrl = self.config.proxy;
-                } else {
-                    proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-                }
-                if (proxyUrl) {
-                    path = Url.format({
-                        protocol: protocol,
-                        hostname: host,
-                        port: port,
-                        pathname: path
-                    });
+                var protocol = self.api.schemes[0];
+                var host = self.api.host;
+                var port = protocol === "https" ? 443 : 80;
 
-                    if (!/^(http|https):\/\//.test(proxyUrl))
-                        proxyUrl = "https://" + proxyUrl;
-
-                    var parsedUrl = Url.parse(proxyUrl);
-                    protocol = parsedUrl.protocol.replace(":", "");
-                    host = parsedUrl.hostname;
-                    port = parsedUrl.port || (protocol === "https" ? 443 : 80);
-                }
                 if (!hasBody && query.length)
                     path += "?" + query.join("&");
 
@@ -376,7 +249,7 @@ var Client = module.exports = function(config) {
                     headers["user-agent"] = "NodeJS HTTP Client";
 
                 if (!("accept" in headers))
-                    headers.accept = self.config.requestMedia || self.constants.requestMedia;
+                    headers.accept = self.api.consumes[0];
 
                 var options = {
                     host: host,
@@ -386,8 +259,6 @@ var Client = module.exports = function(config) {
                     headers: headers
                 };
 
-                if (self.config.rejectUnauthorized !== undefined)
-                    options.rejectUnauthorized = self.config.rejectUnauthorized;
 
                 if (self.debug)
                     console.log("REQUEST: ", options);
@@ -463,4 +334,5 @@ var Client = module.exports = function(config) {
 
         return deferred.promise;
     };
+
 }).call(Client.prototype);
