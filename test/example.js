@@ -4,7 +4,6 @@ var chai    = require('chai');
 var expect  = chai.expect;
 var Client  = require("./../index");
 var Q       = require("q");
-var path    = require("path");
 
 describe("[runtime]", function() {
     var client;

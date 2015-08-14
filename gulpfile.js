@@ -29,7 +29,7 @@ gulp.task('unit_pre', function () {
             statements: 100,
             blocks: 100,
             lines: 100,
-            uncovered: 0
+            uncovered: undefined
         }))
         .once('error', function (err) {
             console.error(err);
@@ -47,8 +47,6 @@ gulp.task('clean', function () {
 
 gulp.task('unit_test', function (callback) {
     runSequence(
-        'lint',
         'unit_pre',
-        'clean',
         callback);
 });

@@ -1,30 +1,30 @@
 "use strict";
 
-var fs = require("fs");
-var mime = require("mime");
-var Util = require("./util");
-var Q = require('q');
-var request = require('request');
+var fs         = require("fs");
+var mime       = require("mime");
+var Util       = require("./util");
+var Q          = require('q');
+var request    = require('request');
 var CFError    = require('cf-errors');
 var ErrorTypes = CFError.errorTypes;
-var Fs   = require("fs");
-var Handler = require("./handler.js");
+var Fs         = require("fs");
+var Handler    = require("./handler.js");
 
-var Client = module.exports = function(config) {
+var Client = module.exports = function (config) {
 
-    config = config || {};
+    config         = config || {};
     config.headers = config.headers || {};
-    this.config = config;
-    this.debug = Util.isTrue(config.debug);
+    this.config    = config;
+    this.debug     = Util.isTrue(config.debug);
 };
 
-(function() {
+(function () {
 
-    this.getApi = function() {
-        var self = this;
+    this.getApi = function () {
+        var self     = this;
         var deferred = Q.defer();
 
-        if (self.config.url){
+        if (self.config.url) {
             request(self.config.url, function (error, response, body) {
                 if (!error && response.statusCode === 200) {
                     self.api = JSON.parse(body);
@@ -36,7 +36,7 @@ var Client = module.exports = function(config) {
                 }
             });
         }
-        else if (self.config.file){
+        else if (self.config.file) {
             self.api = {routes: JSON.parse(Fs.readFileSync(self.config.file, "utf8"))};
             self.setupRoutes();
             deferred.resolve();
@@ -49,39 +49,39 @@ var Client = module.exports = function(config) {
     };
 
 
-    this.setupRoutes = function() {
-        var self = this;
-        var api = this.api;
-        var routes = api.paths;
+    this.setupRoutes = function () {
+        var self    = this;
+        var api     = this.api;
+        var routes  = api.paths;
         var headers = [];
 
         var basePath = "";
         // Check if a basePath is passed in the data and strip any leading or trailing slashes from it.
         if (typeof api.basePath === "string") {
-            basePath = "/" + api.basePath.replace(/(^[\/]+|[\/]+$)/g, "");
+            basePath     = "/" + api.basePath.replace(/(^[\/]+|[\/]+$)/g, "");
             api.basePath = basePath;
         }
 
 
         function prepareApi(struct) {
-            Object.keys(struct).forEach(function(routePart) {
-                Object.keys(struct[routePart]).forEach(function(methodPart){
+            Object.keys(struct).forEach(function (routePart) {
+                Object.keys(struct[routePart]).forEach(function (methodPart) {
                     var block = struct[routePart][methodPart];
 
                     block.parameters = block.parameters || [];
-                    block.method = methodPart;
-                    block.url = routePart;
-                    var section = block.tags[0];
+                    block.method     = methodPart;
+                    block.url        = routePart;
+                    var section      = block.tags[0];
 
                     // add the handler to the sections
-                    if (!api[section]){
+                    if (!api[section]) {
                         self[section] = {};
-                        api[section] = {};
+                        api[section]  = {};
                     }
 
                     api[section][block.operationId] = new Handler(headers);
 
-                    self[section][block.operationId] = function(msg) {
+                    self[section][block.operationId] = function (msg) {
                         return api[section][block.operationId].call(self, msg, block);
                     };
                 });
@@ -91,17 +91,17 @@ var Client = module.exports = function(config) {
         prepareApi(routes);
     };
 
-    this.authenticate = function(options) {
+    this.authenticate = function (options) {
         if (!options) {
             this.auth = false;
             return;
         }
         if (!options.type || "basic|token".indexOf(options.type) === -1)
             throw new CFError(ErrorTypes.Error, "Invalid authentication type, must be 'basic' or 'token'");
-        if (options.type === "basic"){
+        if (options.type === "basic") {
             throw new CFError(ErrorTypes.Error, "Basic authentication is not yet implemented");
         }
-        if (options.type === "basic" && (!options.username || !options.password)){
+        if (options.type === "basic" && (!options.username || !options.password)) {
             throw new CFError(ErrorTypes.Error, "Basic authentication requires both a username and password to be set");
         }
         if (options.type === "token" && !options.token)
@@ -120,16 +120,16 @@ var Client = module.exports = function(config) {
         Object.keys(msg).forEach(function (key) {
             var value = msg[key];
             var valueIn; // 'path' || 'query' || 'body'
-            if (def.parameters[key]){
+            if (def.parameters[key]) {
                 valueIn = def.parameters[key].in;
             }
 
             var val;
-            if (valueIn === 'path' || format === 'query'){
-                if (typeof value === "object"){
+            if (valueIn === 'path' || format === 'query') {
+                if (typeof value === "object") {
                     try {
                         value = JSON.stringify(value);
-                        val = encodeURIComponent(value);
+                        val   = encodeURIComponent(value);
                     }
                     catch (ex) {
                         return Util.log("httpSend: Error while converting object to JSON: " +
@@ -147,7 +147,7 @@ var Client = module.exports = function(config) {
             if (valueIn === 'path') {
                 url = url.replace("{" + key + "}", val);
             }
-            else if (valueIn === 'query'){
+            else if (valueIn === 'query') {
                 if (format === "json")
                     ret.query[key] = val;
                 else if (format === "query")
@@ -160,14 +160,14 @@ var Client = module.exports = function(config) {
         return ret;
     }
 
-/*
-    if (param["$ref"]){
-        var paramName = param["$ref"].split('/')[2];
-        paramObj = api.parameters[paramName];
-    }
-*/
+    /*
+     if (param["$ref"]){
+     var paramName = param["$ref"].split('/')[2];
+     paramObj = api.parameters[paramName];
+     }
+     */
 
-    this.httpSend = function(msg, block) {
+    this.httpSend = function (msg, block) {
 
         if (!msg)
             msg = {};
@@ -177,19 +177,19 @@ var Client = module.exports = function(config) {
         var self = this;
 
         Q()
-            .then(function(){
-                var method = block.method.toLowerCase();
+            .then(function () {
+                var method      = block.method.toLowerCase();
                 var hasFileBody = block.hasFileBody;
-                var hasBody = !hasFileBody && ("head|get|delete".indexOf(method) === -1);
-                var format = hasBody ? 'json' : 'query';
-                var obj = getQueryAndUrl(msg, block, format, self.api);
-                var query = obj.query;
-                var url = obj.url;
+                var hasBody     = !hasFileBody && ("head|get|delete".indexOf(method) === -1);
+                var format      = hasBody ? 'json' : 'query';
+                var obj         = getQueryAndUrl(msg, block, format, self.api);
+                var query       = obj.query;
+                var url         = obj.url;
 
-                var path = url;
+                var path     = url;
                 var protocol = self.api.schemes[0];
-                var host = self.api.host;
-                var port = protocol === "https" ? 443 : 80;
+                var host     = self.api.host;
+                var port     = protocol === "https" ? 443 : 80;
 
                 if (!hasBody && query.length)
                     path += "?" + query.join("&");
@@ -204,7 +204,7 @@ var Client = module.exports = function(config) {
                     else if (format !== "raw")
                         query = query.join("&");
                     headers["content-length"] = Buffer.byteLength(query, "utf8");
-                    headers["content-type"] = format === "json"
+                    headers["content-type"]   = format === "json"
                         ? "application/json; charset=utf-8" // jshint ignore:line
                         : format === "raw"
                         ? "text/plain; charset=utf-8" // jshint ignore:line
@@ -227,7 +227,7 @@ var Client = module.exports = function(config) {
                 }
 
                 function callCallback(err, result) {
-                    if (err){
+                    if (err) {
                         deferred.reject(err);
                     }
                     else {
@@ -236,13 +236,14 @@ var Client = module.exports = function(config) {
                 }
 
                 function addCustomHeaders(customHeaders) {
-                    Object.keys(customHeaders).forEach(function(header) {
+                    Object.keys(customHeaders).forEach(function (header) {
                         var headerLC = header.toLowerCase();
                         if (block.requestHeaders.indexOf(headerLC) === -1)
                             return;
                         headers[headerLC] = customHeaders[header];
                     });
                 }
+
                 addCustomHeaders(Util.extend(msg.headers || {}, self.config.headers));
 
                 if (!headers["user-agent"])
@@ -264,20 +265,20 @@ var Client = module.exports = function(config) {
                     console.log("REQUEST: ", options);
 
                 function httpSendRequest() {
-                    var req = require(protocol).request(options, function(res) {
+                    var req = require(protocol).request(options, function (res) {
                         if (self.debug) {
                             console.log("STATUS: " + res.statusCode);
                             console.log("HEADERS: " + JSON.stringify(res.headers));
                         }
                         res.setEncoding("utf8");
                         var data = "";
-                        res.on("data", function(chunk) {
+                        res.on("data", function (chunk) {
                             data += chunk;
                         });
-                        res.on("error", function(err) {
+                        res.on("error", function (err) {
                             callCallback(err);
                         });
-                        res.on("end", function() {
+                        res.on("end", function () {
                             res.data = data;
                             callCallback(null, res);
                         });
@@ -288,13 +289,13 @@ var Client = module.exports = function(config) {
                         req.setTimeout(timeout);
                     }
 
-                    req.on("error", function(e) {
+                    req.on("error", function (e) {
                         if (self.debug)
                             console.log("problem with request: " + e.message);
                         callCallback(new CFError(ErrorTypes.Error, e, "Problem with request"));
                     });
 
-                    req.on("timeout", function() {
+                    req.on("timeout", function () {
                         if (self.debug)
                             console.log("problem with request: timed out");
                         callCallback(new CFError(ErrorTypes.Error, "Request timed out"));
@@ -317,12 +318,12 @@ var Client = module.exports = function(config) {
                 }
 
                 if (hasFileBody) {
-                    fs.stat(msg.filePath, function(err, stat) {
+                    fs.stat(msg.filePath, function (err, stat) {
                         if (err) {
                             callCallback(err);
                         } else {
                             headers["content-length"] = stat.size;
-                            headers["content-type"] = mime.lookup(msg.name);
+                            headers["content-type"]   = mime.lookup(msg.name);
                             httpSendRequest();
                         }
                     });
