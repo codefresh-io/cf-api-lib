@@ -134,6 +134,10 @@ module.exports.create = Factory;
         this.auth = options;
     };
 
+    this.removeCredentials = function () {
+        this.auth = null;
+    };
+
     function getQueryAndUrl(msg, def, format, api) {
         var ret = {
             payload: format === "json" ? {} : [],
