@@ -40,9 +40,9 @@ var Handler = function (headers) {
                         }
                         else {
                             var progDef = block.progress;
-                            if (progDef && progDef.section && progDef.route && progDef.allStates && progDef.successStates && progDef.failStates && progDef.finishStates && self[progDef.section] && self[progDef.section][progDef.route]){
+                            if (progDef && progDef.tag && progDef.operationId && progDef.allStates && progDef.successStates && progDef.failStates && progDef.finishStates && self[progDef.tag] && self[progDef.tag][progDef.operationId]){
                                 var getProgress = function(progData){
-                                    return self[progDef.section][progDef.route].call(self, progData)
+                                    return self[progDef.tag][progDef.operationId].call(self, progData)
                                         .then(function(res){
                                             deferred.notify(res);
                                             if (progDef.finishStates.indexOf(res.data.status) !== -1){
@@ -59,7 +59,7 @@ var Handler = function (headers) {
                                         },function(err){
                                             if (progDef.failStates.indexOf(err.data.status) !== -1){
                                                 deferred.notify(err);
-                                                deferred.reject(err);
+                                                deferred.reject(new CFError(ErrorTypes.Error, err, "Progress id: " + progData.id + " at index: " + progData.index));
                                             }
                                             else {
                                                 deferred.reject(new CFError(ErrorTypes.Error, err, "Failed to return progress for progress id: " + progData.id + " at index: " + progData.index + ". this does not mean that the entire process has failed."));

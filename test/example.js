@@ -1,35 +1,50 @@
 "use strict";
 
 var chai    = require('chai');
-var expect  = chai.expect;
-var Client  = require("./../index");
+var expect  = chai.expect; // jshint ignore:line
+var client  = require("./../index");
 var Q       = require("q");
 
 describe("[runtime]", function() {
-    var client;
-    var token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6Iml0YWktY29kZWZyZXNoIiwicHJvdmlkZXIiOnsibmFtZSI6ImdpdGh1YiJ9LCJpYXQiOjE0MzkxNTc3NzksImV4cCI6MTQzOTI0NDE3OX0.pzvEVXbW7I-IPaMgrQIyOD-OCk4qB90mPp6aM5gE4zY";
+    var api;
+    var token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6Iml0YWktY29kZWZyZXNoIiwicHJvdmlkZXIiOnsibmFtZSI6ImdpdGh1YiJ9LCJpYXQiOjE0Mzk4MDM0ODgsImV4cCI6MTQzOTg4OTg4OH0.Wh4t5_iWBQBveV5nR5xC2-An20Hr3NR71D1eK9OzRtw";
 
     beforeEach(function() {
-        client = new Client({
-            performValidationsOnClient: false
-        });
-        client.authenticate({
-            type: "token",
-            token: token
-        });
+        return client.create({
+            performValidationsOnClient: false,
+            //file: path.resolve(__dirname, '../swagger.json'),
+            url: 'http://codefresh/api/swagger.json'
+        })
+            .then(function(res){
+                api = res;
+                api.authenticate({
+                    type: "token",
+                    token: token
+                });
+            });
+    });
+
+    it.only('blah', function(){
+        return api.user.get()
+            .then(function(res){
+                console.log(res);
+            }, function(err){
+                console.log(err);
+            });
     });
 
     it("should successfully execute POST /runtime/testit (launch)",  function() {
         this.timeout(70000);
 
-        return client.runtime.launch(
+        return api.runtime.launch(
             {
                 repoOwner: "itai-codefresh",
                 repoName: "userrecstudy",
                 repoData: {
                     url:{
-                        https: "https://github.com/codefresh-io/recuserstudy"
+                        https: "https://github.com/itai-codefresh/recuserstudy.git"
                     }
+
                 },
                 sha: "",
                 branch: "master"
@@ -43,14 +58,31 @@ describe("[runtime]", function() {
             });
     });
 
-    it.only("should successfully execute settings",  function() {
+    it("should successfully execute settings",  function() {
         this.timeout(5000);
 
-        return client.settings.update(
+        return api.repos.setSettings(
             {
                 repoOwner: "itai-codefresh",
                 repoName: "userrecstudy",
                 settings: {}
+            })
+            .then(function(res){
+                console.log(res);
+            }, function(err){
+                return Q.reject(err);
+            }, function(prog){
+                console.log(prog);
+            });
+    });
+
+    it("should successfully get settings",  function() {
+        this.timeout(5000);
+
+        return api.repos.getSettings(
+            {
+                repoOwner: "itai-codefresh",
+                repoName: "userrecstudy"
             })
             .then(function(res){
                 console.log(res);
