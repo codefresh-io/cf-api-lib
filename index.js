@@ -11,13 +11,27 @@ var ErrorTypes = CFError.errorTypes;
 var Fs         = require("fs");
 var Handler    = require("./handler.js");
 
-var Client = module.exports = function (config) {
 
+var Client = function (config) {
     config         = config || {};
     config.headers = config.headers || {};
     this.config    = config;
     this.debug     = Util.isTrue(config.debug);
 };
+
+var Factory = function(config) {
+    var client;
+    return Q()
+        .then(function(){
+            client = new Client(config);
+            return client.getApi();
+        })
+        .then(function(){
+            return client;
+        });
+};
+
+module.exports.create = Factory;
 
 (function () {
 
