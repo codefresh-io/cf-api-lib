@@ -1,6 +1,6 @@
 {
   "name": "cf-api-lib",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "NodeJS client for API servers",
   "dependencies": {
     "cf-errors": "0.0.4",

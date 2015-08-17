@@ -11,7 +11,6 @@ describe("[runtime]", function() {
 
     beforeEach(function() {
         return client.create({
-            performValidationsOnClient: false,
             //file: path.resolve(__dirname, '../swagger.json'),
             url: 'http://codefresh/api/swagger.json'
         })
