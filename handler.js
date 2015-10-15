@@ -66,6 +66,9 @@ var Handler = function (headers) {
                                             }
                                         });
                                 };
+                                if (!ret.data.id){
+                                    deferred.reject(new CFError(ErrorTypes.Error, "did not get a progress id in the response body although this api is marked as a progress api."));
+                                }
                                 getProgress({id: ret.data.id, index: 0});
                             }
                             else {
