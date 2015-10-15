@@ -54,7 +54,11 @@ var Handler = function (headers) {
                                                 }
                                             }
                                             else {
-                                                return getProgress({id: progData.id, index:res.data.index});
+                                                setTimeout(
+                                                    function(){
+                                                        getProgress({id: progData.id, index:res.data.index});
+                                                    },
+                                                    2000);
                                             }
                                         },function(err){
                                             if (progDef.failStates.indexOf(err.data.status) !== -1){
@@ -69,7 +73,9 @@ var Handler = function (headers) {
                                 if (!ret.data.id){
                                     deferred.reject(new CFError(ErrorTypes.Error, "did not get a progress id in the response body although this api is marked as a progress api."));
                                 }
-                                getProgress({id: ret.data.id, index: 0});
+                                else {
+                                    getProgress({id: ret.data.id, index: 0});
+                                }
                             }
                             else {
                                 deferred.resolve(ret);

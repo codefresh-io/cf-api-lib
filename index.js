@@ -195,6 +195,9 @@ module.exports.create = Factory;
             else if (valueIn === 'body'){
                 ret.payload[key] = val;
             }
+            else if (valueIn === 'header'){
+                msg.headers[key] = val;
+            }
 
         });
 
@@ -205,6 +208,8 @@ module.exports.create = Factory;
 
         if (!msg)
             msg = {};
+
+        msg.headers = {};
 
         var deferred = Q.defer();
 
@@ -269,16 +274,18 @@ module.exports.create = Factory;
                     }
                 }
 
-                function addCustomHeaders(customHeaders) {
-                    Object.keys(customHeaders).forEach(function (header) {
-                        var headerLC = header.toLowerCase();
-                        if (block.requestHeaders.indexOf(headerLC) === -1)
-                            return;
-                        headers[headerLC] = customHeaders[header];
-                    });
-                }
+                /*               function addCustomHeaders(customHeaders) {
+                 Object.keys(customHeaders).forEach(function (header) {
+                 var headerLC = header.toLowerCase();
+                 if (block.requestHeaders.indexOf(headerLC) === -1)
+                 return;
+                 headers[headerLC] = customHeaders[header];
+                 });
+                 }*/
 
-                addCustomHeaders(Util.extend(msg.headers || {}, self.config.headers));
+                //addCustomHeaders(Util.extend(msg.headers, self.config.headers));
+
+                Util.extend(headers, msg.headers);
 
                 if (!headers["user-agent"])
                     headers["user-agent"] = "NodeJS HTTP Client";
