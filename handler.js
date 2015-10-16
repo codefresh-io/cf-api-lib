@@ -42,44 +42,46 @@ var Handler = function (headers) {
                             var progDef = block.progress;
                             if (progDef && progDef.tag && progDef.operationId && progDef.allStates && progDef.successStates && progDef.failStates && progDef.finishStates && self[progDef.tag] && self[progDef.tag][progDef.operationId]){
                                 var getProgress = function(progData){
-                                    var specificIdDeferred = Q.defer();
-
                                     self[progDef.tag][progDef.operationId].call(self, progData)
                                         .then(function(res){
                                             deferred.notify({id: progData.id, res: res});
                                             if (progDef.finishStates.indexOf(res.data.status) !== -1){
                                                 if (progDef.failStates.indexOf(res.data.status) !== -1){
-                                                    specificIdDeferred.reject(res);
+                                                    progData.promise.reject(res);
                                                 }
                                                 else {
-                                                    specificIdDeferred.resolve(res);
+                                                    progData.promise.resolve(res);
                                                 }
                                             }
                                             else {
                                                 setTimeout(
                                                     function(){
-                                                        getProgress({id: progData.id, index:res.data.index});
+                                                        getProgress({id: progData.id, index:res.data.index, promise: progData.promise});
                                                     },
                                                     2000);
                                             }
                                         },function(err){
                                             if (progDef.failStates.indexOf(err.data.status) !== -1){
                                                 deferred.notify({id: progData.id, err: err});
-                                                specificIdDeferred.reject(new CFError(ErrorTypes.Error, err, "Progress id: " + progData.id + " at index: " + progData.index));
+                                                progData.promise.reject(new CFError(ErrorTypes.Error, err, "Progress id: " + progData.id + " at index: " + progData.index));
                                             }
                                             else {
-                                                specificIdDeferred.reject(new CFError(ErrorTypes.Error, err, "Failed to return progress for progress id: " + progData.id + " at index: " + progData.index + ". this does not mean that the entire process has failed."));
+                                                progData.promise.reject(new CFError(ErrorTypes.Error, err, "Failed to return progress for progress id: " + progData.id + " at index: " + progData.index + ". this does not mean that the entire process has failed."));
                                             }
                                         });
-
-                                    return specificIdDeferred.promise;
                                 };
+                                if (ret.data.id){
+                                    ret.data.progressIds = [ret.data.id];
+                                    delete ret.data.id;
+                                }
                                 if (!ret.data.progressIds){
                                     deferred.reject(new CFError(ErrorTypes.Error, "did not get a progress id in the response body although this api is marked as a progress api."));
                                 }
                                 else {
                                     var promises = ret.data.progressIds.map(function(id){
-                                        return getProgress({id: id, index: 0});
+                                        var specificIdDeferred = Q.defer();
+                                        getProgress({id: id, index: 0, promise: specificIdDeferred});
+                                        return specificIdDeferred.promise;
                                     });
                                     return Q.all(promises)
                                         .then(deferred.resolve, deferred.reject);
