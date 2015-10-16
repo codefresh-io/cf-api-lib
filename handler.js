@@ -42,15 +42,17 @@ var Handler = function (headers) {
                             var progDef = block.progress;
                             if (progDef && progDef.tag && progDef.operationId && progDef.allStates && progDef.successStates && progDef.failStates && progDef.finishStates && self[progDef.tag] && self[progDef.tag][progDef.operationId]){
                                 var getProgress = function(progData){
-                                    return self[progDef.tag][progDef.operationId].call(self, progData)
+                                    var specificIdDeferred = Q.defer();
+
+                                    self[progDef.tag][progDef.operationId].call(self, progData)
                                         .then(function(res){
-                                            deferred.notify(res);
+                                            deferred.notify({id: progData.id, res: res});
                                             if (progDef.finishStates.indexOf(res.data.status) !== -1){
                                                 if (progDef.failStates.indexOf(res.data.status) !== -1){
-                                                    deferred.reject(res);
+                                                    specificIdDeferred.reject(res);
                                                 }
                                                 else {
-                                                    deferred.resolve(res);
+                                                    specificIdDeferred.resolve(res);
                                                 }
                                             }
                                             else {
@@ -62,19 +64,25 @@ var Handler = function (headers) {
                                             }
                                         },function(err){
                                             if (progDef.failStates.indexOf(err.data.status) !== -1){
-                                                deferred.notify(err);
-                                                deferred.reject(new CFError(ErrorTypes.Error, err, "Progress id: " + progData.id + " at index: " + progData.index));
+                                                deferred.notify({id: progData.id, err: err});
+                                                specificIdDeferred.reject(new CFError(ErrorTypes.Error, err, "Progress id: " + progData.id + " at index: " + progData.index));
                                             }
                                             else {
-                                                deferred.reject(new CFError(ErrorTypes.Error, err, "Failed to return progress for progress id: " + progData.id + " at index: " + progData.index + ". this does not mean that the entire process has failed."));
+                                                specificIdDeferred.reject(new CFError(ErrorTypes.Error, err, "Failed to return progress for progress id: " + progData.id + " at index: " + progData.index + ". this does not mean that the entire process has failed."));
                                             }
                                         });
+
+                                    return specificIdDeferred.promise;
                                 };
-                                if (!ret.data.id){
+                                if (!ret.data.progressIds){
                                     deferred.reject(new CFError(ErrorTypes.Error, "did not get a progress id in the response body although this api is marked as a progress api."));
                                 }
                                 else {
-                                    getProgress({id: ret.data.id, index: 0});
+                                    var promises = ret.data.progressIds.map(function(id){
+                                        return getProgress({id: id, index: 0});
+                                    });
+                                    return Q.all(promises)
+                                        .then(deferred.resolve, deferred.reject);
                                 }
                             }
                             else {
