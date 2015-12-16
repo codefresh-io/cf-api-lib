@@ -223,6 +223,7 @@ module.exports.create = Factory;
                 var format      = hasBody ? 'json' : 'query';
                 var obj         = getQueryAndUrl(msg, block, format, self.api);
                 var payload     = obj.payload;
+                delete payload.headers;
                 var url         = obj.url;
 
                 var path     = url;
