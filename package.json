@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "NodeJS client for API servers",
   "dependencies": {
-    "cf-errors": "0.0.4",
+    "cf-errors": "git+https://github.com/codefresh-io/cf-errors.git#7e4d60cc0794482d5af4e66dcb753d456379f525",
     "lodash": "^3.10.1",
     "mime": "^1.2.11",
     "q": "^1.4.1",
