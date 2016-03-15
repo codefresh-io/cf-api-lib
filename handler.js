@@ -42,7 +42,7 @@ var Handler = function (headers) {
                             var progDef = block.progress;
                             if (progDef && progDef.tag && progDef.operationId && progDef.allStates && progDef.successStates && progDef.failStates && progDef.finishStates && self[progDef.tag] && self[progDef.tag][progDef.operationId]){
                                 var getProgress = function(progData){
-                                    self[progDef.tag][progDef.operationId].call(self, progData)
+                                    self[progDef.tag][progDef.operationId].call(self, {id: progData.id})
                                         .then(function(res){
                                             deferred.notify({id: progData.id, res: res});
                                             if (progDef.finishStates.indexOf(res.data.status) !== -1){
@@ -56,7 +56,7 @@ var Handler = function (headers) {
                                             else {
                                                 setTimeout(
                                                     function(){
-                                                        getProgress({id: progData.id, index:res.data.index, promise: progData.promise});
+                                                        getProgress({id: progData.id, promise: progData.promise});
                                                     },
                                                     2000);
                                             }
@@ -80,7 +80,7 @@ var Handler = function (headers) {
                                 else {
                                     var promises = ret.data.progressIds.map(function(id){
                                         var specificIdDeferred = Q.defer();
-                                        getProgress({id: id, index: 0, promise: specificIdDeferred});
+                                        getProgress({id: id, promise: specificIdDeferred});
                                         return specificIdDeferred.promise;
                                     });
                                     return Q.all(promises)
