@@ -47,7 +47,7 @@ module.exports.create = Factory;
                     deferred.resolve();
                 }
                 else {
-                    deferred.reject(new CFError(ErrorTypes.Error, "failed to retrieve api metadata"));
+                    deferred.reject(new CFError(ErrorTypes.Error, "failed to retrieve api metadata from url:%s", self.config.url));
                 }
             });
         }
