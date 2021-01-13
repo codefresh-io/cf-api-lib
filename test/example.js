@@ -23,7 +23,7 @@ describe("[runtime]", function() {
             });
     });
 
-    it('blah', function(){
+    it.only('blah', function(){
         return api.user.get()
             .then(function(res){
                 console.log(res);
