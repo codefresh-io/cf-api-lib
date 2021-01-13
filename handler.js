@@ -1,6 +1,6 @@
 var Q = require('q');
 var CFError    = require('cf-errors');
-var ErrorTypes = CFError.errorTypes;
+var ErrorTypes = CFError.Errors;
 
 var Handler = function (headers) {
 

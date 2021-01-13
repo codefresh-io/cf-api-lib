@@ -1,13 +1,13 @@
 {
   "name": "cf-api-lib",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "NodeJS client for API servers",
   "dependencies": {
-    "cf-errors": "git+https://github.com/codefresh-io/cf-errors.git#24eeeab7e67e13e0edc011d4d97996f4ca71c31c",
-    "lodash": "^3.10.1",
+    "cf-errors": "^0.1.15",
+    "lodash": "4.17.20",
     "mime": "^1.2.11",
     "q": "^1.4.1",
-    "request": "^2.60.0"
+    "request": "2.88.2"
   },
   "devDependencies": {
     "optimist": "~0.6.0",
