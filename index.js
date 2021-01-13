@@ -7,7 +7,7 @@ var Q          = require('q');
 var request    = require('request');
 var _          = require('lodash');
 var CFError    = require('cf-errors');
-var ErrorTypes = CFError.errorTypes;
+var ErrorTypes = CFError.Errors;
 var Fs         = require("fs");
 var Handler    = require("./handler.js");
 
@@ -47,7 +47,7 @@ module.exports.create = Factory;
                     deferred.resolve();
                 }
                 else {
-                    deferred.reject(new CFError(ErrorTypes.Error, "failed to retrieve api metadata from url:%s", self.config.url));
+                    deferred.reject(new CFError(ErrorTypes.Error, 'failed to retrieve api metadata from url: ' + self.config.url));
                 }
             });
         }

@@ -10,3 +10,4 @@ api/**/*.js
 debug
 reports
 coverage
+.idea
