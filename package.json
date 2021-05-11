@@ -4,7 +4,7 @@
   "description": "NodeJS client for API servers",
   "dependencies": {
     "cf-errors": "^0.1.15",
-    "lodash": "4.17.20",
+    "lodash": "4.17.21",
     "mime": "^1.2.11",
     "q": "^1.4.1",
     "request": "2.88.2"
