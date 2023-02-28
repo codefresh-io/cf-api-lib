@@ -3,7 +3,7 @@
   "version": "0.0.4",
   "description": "NodeJS client for API servers",
   "dependencies": {
-    "cf-errors": "^0.1.15",
+    "cf-errors": "^0.1.16",
     "lodash": "4.17.20",
     "mime": "^1.2.11",
     "q": "^1.4.1",
